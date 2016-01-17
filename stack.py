@@ -37,3 +37,9 @@ class MarkItStack (Gtk.Stack):
 
     def on_file_added (self, *args):
         self.add_page (args[1])
+
+    def join_threads (self):
+        for scrolled_child in self.get_children ():
+            # This should give us the scrolled window
+            for text_view in scrolled_child.get_children ():
+                text_view.join_thread ()

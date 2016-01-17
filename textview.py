@@ -2,10 +2,44 @@
 
 from gi.repository import Gtk, GLib, GObject, GdkPixbuf, Gio, Pango, GtkSource, Gdk
 
+from threading import Thread, Event, Timer
+import time
+
 class MarkItTextView (GtkSource.View):
+
+    class ResettingTimer (object):
+
+        # This class has a timer which resets
+        # We want to start a timer which executes a function like a normal timer
+        # However, if the timer is 'reset', then cancel that timer and create a
+        # new timer
+
+        def __init__ (self, interval, function):
+            self.interval = interval
+            self.function = function
+
+            self.timer = None
+
+        def start (self):
+            self.timer = Timer (self.interval, self.function)
+            self.timer.start ()
+
+        def restart (self):
+            self.timer.cancel ()
+            self.start ()
+
+        def join (self):
+            self.timer.join ()
 
     def __init__(self, source_file):
         Gtk.TextView.__init__ (self)
+
+        self.source_file = source_file
+
+        # Set up a threaded timer to auto save the buffer
+        self.is_typing = False
+        self.auto_save = self.ResettingTimer (0.75, self.save_file)
+        self.auto_save.start ()
 
         # Random settings
         self.set_wrap_mode (Gtk.WrapMode.WORD_CHAR)
@@ -35,6 +69,13 @@ class MarkItTextView (GtkSource.View):
         self.get_buffer ().connect ("insert-text", self.on_text_insert)
 
         self.get_buffer().set_text (source_file.read())
+
+    def save_file (self):
+        self.source_file.seek (0)
+        self.source_file.write (self.get_buffer().get_text
+                (self.get_buffer().get_bounds () [0],
+                 self.get_buffer().get_bounds ()[1], False))
+        self.source_file.truncate ()
 
     def create_tags (self, buff):
         # Lets make some formatting tags
@@ -79,6 +120,9 @@ class MarkItTextView (GtkSource.View):
         self.list_margin = buff.create_tag (left_margin = margin * 1.25)
 
     def on_text_changed (self, buff):
+
+        self.auto_save.restart ()
+
         self.check_emphasis (buff, "*")
         self.check_emphasis (buff, "_")
         self.check_emphasis (buff, "**")
@@ -200,3 +244,6 @@ class MarkItTextView (GtkSource.View):
         # Use Gtk.TextMark maybe?
     def check_deletions (self, buff):
         pass
+
+    def join_thread (self):
+        self.auto_save.join ()

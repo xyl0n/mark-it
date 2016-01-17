@@ -7,6 +7,8 @@ from sidebar import MarkItSidebar
 from filemanager import MarkItFileManager
 from stack import MarkItStack
 
+import threading
+
 class MarkItWindow(Gtk.Window):
 
     def __init__ (self):
@@ -56,8 +58,10 @@ class MarkItWindow(Gtk.Window):
 
     def on_close (self, *args):
         for file_object in self.file_manager.get_file_list ():
-            file_object.close ()
-
+            while threading.activeCount() > 1:
+                pass
+            else:
+                file_object.close ()
 
 window = MarkItWindow ()
 window.connect('delete-event', Gtk.main_quit)
