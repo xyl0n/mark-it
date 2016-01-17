@@ -13,6 +13,7 @@ class MarkItWindow(Gtk.Window):
         Gtk.Window.__init__(self)
         self.set_title ("Mark It")
         self.set_default_size (1200, 800)
+        self.connect ("delete-event", self.on_close)
 
         self.file_manager = MarkItFileManager ()
 
@@ -51,6 +52,11 @@ class MarkItWindow(Gtk.Window):
 
     def on_row_clicked (self, *args):
         self.stack.set_visible_child_name (args[1])
+        self.header.set_title (args[1])
+
+    def on_close (self, *args):
+        for file_object in self.file_manager.get_file_list ():
+            file_object.close ()
 
 
 window = MarkItWindow ()

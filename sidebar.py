@@ -53,8 +53,8 @@ class MarkItSidebar (Gtk.Box):
         self.pack_start (self.file_listbox, True, True, 0)
 
     def populate_sidebar (self):
-        for filename in self.file_manager.get_file_list ():
-            file_label = self.create_sidebar_row (filename)
+        for file_object in self.file_manager.get_file_list ():
+            file_label = self.create_sidebar_row (self.file_manager.path_to_name (file_object.name))
             row = Gtk.ListBoxRow ()
             row.add (file_label)
             self.file_listbox.insert (row, -1)
@@ -75,11 +75,11 @@ class MarkItSidebar (Gtk.Box):
     def on_file_added (self, *args):
         # Insert a new entry on sidebar for the file
         new_file_label = self.create_sidebar_row (args[1])
-        index = self.file_manager.get_file_list ().index (args[1])
-        self.file_listbox.insert (new_file_label, -1)
+        index = self.file_manager.get_index_of_file (args[1])
+        self.file_listbox.insert (new_file_label, index)
         self.file_listbox.show_all ()
 
-        text_view = MarkItTextView ()
+        text_view = MarkItTextView (self.file_manager.get_file_object_from_name (args[1]))
         text_scrolled = Gtk.ScrolledWindow ()
         text_scrolled.add (text_view)
 

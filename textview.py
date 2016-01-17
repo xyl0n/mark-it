@@ -4,7 +4,7 @@ from gi.repository import Gtk, GLib, GObject, GdkPixbuf, Gio, Pango, GtkSource, 
 
 class MarkItTextView (GtkSource.View):
 
-    def __init__(self):
+    def __init__(self, source_file):
         Gtk.TextView.__init__ (self)
 
         # Random settings
@@ -34,12 +34,7 @@ class MarkItTextView (GtkSource.View):
         self.get_buffer ().connect("changed", self.on_text_changed)
         self.get_buffer ().connect ("insert-text", self.on_text_insert)
 
-        '''background_color = Gdk.RGBA ()
-        background_color.parse ("#FDF6E3")
-        self.override_background_color (0, background_color)
-        background_color.parse ("#586E75")
-        self.override_color (0, background_color)
-        '''
+        self.get_buffer().set_text (source_file.read())
 
     def create_tags (self, buff):
         # Lets make some formatting tags
@@ -49,6 +44,7 @@ class MarkItTextView (GtkSource.View):
         # And for the headings too
         self.heading_tags = list ()
         heading_first_rgba = Gdk.RGBA ()
+        # COLOURS
         heading_first_rgba.parse ("#1b7bbf")
         self.heading_first = buff.create_tag (weight = Pango.Weight.BOLD,
                                  foreground_rgba = heading_first_rgba)
@@ -72,20 +68,22 @@ class MarkItTextView (GtkSource.View):
         # We want the heading text to be in line with the document body,
         # so any heading symbols go before it
         self.heading_margins = list ()
-        self.first_margin = buff.create_tag (left_margin = 32)
+        margin = 48
+        self.first_margin = buff.create_tag (left_margin = 2 * margin / 3)
         self.heading_margins.append (self.first_margin)
-        self.second_margin = buff.create_tag (left_margin = 24)
+        self.second_margin = buff.create_tag (left_margin = margin / 2)
         self.heading_margins.append (self.second_margin)
-        self.third_margin = buff.create_tag (left_margin = 16)
+        self.third_margin = buff.create_tag (left_margin = margin / 3)
         self.heading_margins.append (self.third_margin)
 
-        self.list_margin = buff.create_tag (left_margin = 54)
+        self.list_margin = buff.create_tag (left_margin = margin * 1.25)
 
     def on_text_changed (self, buff):
         self.check_emphasis (buff, "*")
         self.check_emphasis (buff, "_")
         self.check_emphasis (buff, "**")
         self.check_emphasis (buff, "__")
+        self.check_emphasis (buff, "***")
         self.check_headings (buff)
         self.check_lists (buff)
 
@@ -174,6 +172,9 @@ class MarkItTextView (GtkSource.View):
                     buff.apply_tag (self.bold, asterisk_start, asterisk_end)
                 elif emphasis_type == "__":
                     buff.apply_tag (self.bold, asterisk_start, asterisk_end)
+                if emphasis_type == "***":
+                    buff.apply_tag (self.bold, asterisk_start, asterisk_end)
+                    buff.apply_tag (self.italic, asterisk_start, asterisk_end)
             except IndexError: # Basically, there's a symbol which has no matching pair
                 pass # this is probably a bad thing to do
 

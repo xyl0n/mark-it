@@ -22,11 +22,11 @@ class MarkItStack (Gtk.Stack):
         self.show_all ()
 
     def setup_pages (self):
-        for filename in self.file_manager.get_file_list ():
-            self.add_page (filename)
+        for file_object in self.file_manager.get_file_list ():
+            self.add_page (self.file_manager.path_to_name (file_object.name))
 
     def add_page (self, name):
-        text_view = MarkItTextView ()
+        text_view = MarkItTextView (self.file_manager.get_file_object_from_name (name))
         text_scrolled = Gtk.ScrolledWindow ()
         text_scrolled.add (text_view)
 

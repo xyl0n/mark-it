@@ -37,11 +37,13 @@ class MarkItFileManager (GObject.GObject):
 
         for filename in os.listdir (self.app_dir):
             self.file_count += 1
-            self.file_list.append (filename)
+            file_path = self.app_dir + filename
+            file_object = open (file_path, 'r+')
+            self.file_list.append (file_object)
             if filename[0:8] == "Untitled":
                 self.untitled_count += 1
 
-        self.file_list.sort ()
+        self.file_list = self.sort_file_list (self.file_list)
 
     def get_file_list (self):
         return self.file_list
@@ -56,9 +58,43 @@ class MarkItFileManager (GObject.GObject):
         filepath = self.app_dir + filename
 
         try:
-            open (filepath, 'a')
-            self.file_list.append (filename)
-            self.file_list.sort ()
+            file_object = open (filepath, 'a+')
+            self.file_list.append (file_object)
+            self.file_list = self.sort_file_list (self.file_list)
             self.emit ("file-added", filename)
         except IOError as error:
             raise
+
+    def get_file_object_from_name (self, name):
+        for file_object in self.file_list:
+            if self.path_to_name (file_object.name) == name:
+                return file_object
+
+        return None
+
+    def get_index_of_file (self, name):
+        for file_object in self.file_list:
+            if self.path_to_name(file_object.name) == name:
+                return self.file_list.index (file_object)
+
+        return None
+
+    def path_to_name (self, path):
+        return path [len (self.app_dir):]
+
+    def sort_file_list (self, file_list):
+        name_list = list ()
+        for file_object in file_list:
+            name_list.append (file_object.name)
+
+        name_list.sort ()
+
+        sorted_list = list ()
+        # Get the first name in the list
+        for name in name_list:
+            # Find the file object corresponding to it
+            for file_object in file_list:
+                if file_object.name == name:
+                    sorted_list.insert (name_list.index (name), file_object)
+
+        return sorted_list
