@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from gi.repository import Gtk, GLib, GObject, GdkPixbuf, Gio, Pango
+from gi.repository import Gtk, GLib, GObject, GdkPixbuf, Gio, Pango, Gdk
 
 from textview import MarkItTextView
 from sidebar import MarkItSidebar
@@ -19,19 +19,16 @@ class MarkItWindow(Gtk.Window):
 
         self.file_manager = MarkItFileManager ()
 
+        style = Gtk.CssProvider ()
+        style.load_from_path ("style.css")
+        self.get_style_context ().add_provider_for_screen (Gdk.Screen.get_default (),
+                                                           style, Gtk.STYLE_PROVIDER_PRIORITY_THEME)
+
         self.create_interface ()
 
     def create_interface (self):
 
-        # Make the headerbar
-        self.header = Gtk.HeaderBar ()
-        self.header.set_title ("Untitled 1")
-        self.header.set_show_close_button (True)
-        self.set_titlebar (self.header)
-
-        self.new_file_button = Gtk.Button ().new_from_icon_name ("document-new-symbolic", 1)
-        self.new_file_button.connect ('clicked', self.create_new_file)
-        self.header.pack_start (self.new_file_button)
+        self.set_titlebar (self.create_titlebar ())
 
         self.box = Gtk.Box ()
         self.paned = Gtk.Paned ()
@@ -39,6 +36,8 @@ class MarkItWindow(Gtk.Window):
         self.sidebar = MarkItSidebar (self.file_manager)
         self.sidebar.connect ("row-clicked", self.on_row_clicked)
         self.paned.add1 (self.sidebar)
+        self.document_nav_header.set_size_request (self.sidebar.get_size_request()[0], -1)
+        self.sidebar.connect ("size_allocate", self.on_sidebar_size_change)
 
         self.stack = MarkItStack (self.file_manager)
         self.stack.show_all ()
@@ -48,13 +47,52 @@ class MarkItWindow(Gtk.Window):
 
         self.add (self.box)
 
+    def create_titlebar (self):
+
+        # Make the headerbar
+        # This is for document specific actions
+        self.right_header = Gtk.HeaderBar ()
+        self.right_header.set_title ("Untitled 1")
+        self.right_header.set_show_close_button (True)
+        self.right_header.get_style_context().add_class("titlebar")
+        self.right_header.get_style_context().add_class("markit-right-header")
+
+        # This is for the file browser
+        self.document_nav_header = Gtk.HeaderBar ()
+        self.document_nav_header.set_show_close_button (False)
+        self.document_nav_header.get_style_context().add_class("titlebar")
+        self.document_nav_header.get_style_context().add_class("markit-document-header")
+
+        # Make a new file
+        new_file_button = Gtk.Button ().new_from_icon_name ("document-new-symbolic", 1)
+        new_file_button.connect ('clicked', self.create_new_file)
+        self.document_nav_header.pack_start (new_file_button)
+
+        new_folder_button = Gtk.Button ().new_from_icon_name ("folder-new-symbolic", 1)
+        new_folder_button.connect ('clicked', self.create_new_folder)
+        self.document_nav_header.pack_start (new_folder_button)
+
+        self.header_box = Gtk.Box ()
+        self.header_box.pack_start (self.document_nav_header, False, False, 0)
+        self.header_box.pack_start (Gtk.Separator.new (Gtk.Orientation.VERTICAL), False, False, 0)
+        self.header_box.pack_start (self.right_header, True, True, 0)
+
+        return self.header_box
+
+
     # Wrapper function
     def create_new_file (self, *args):
         self.file_manager.create_new_file ()
 
+    def create_new_folder (self, *args):
+        pass
+
     def on_row_clicked (self, *args):
         self.stack.set_visible_child_name (args[1])
-        self.header.set_title (args[1])
+        self.right_header.set_title (args[1])
+
+    def on_sidebar_size_change (self, widget, allocation):
+        self.document_nav_header.set_size_request (allocation.width, -1)
 
     def on_close (self, *args):
         for file_object in self.file_manager.get_file_list ():

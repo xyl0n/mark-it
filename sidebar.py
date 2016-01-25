@@ -65,6 +65,7 @@ class MarkItSidebar (Gtk.Box):
         file_label = Gtk.Label (label)
         file_label.set_alignment (0.0, 0.5)
         file_label.set_margin_left (16)
+        file_label.get_style_context ().add_class ('markit-sidebar-row')
         return file_label
 
     def remove_children (self):
