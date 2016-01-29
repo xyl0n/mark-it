@@ -5,6 +5,52 @@ import errno
 
 from gi.repository import GObject
 
+class MarkItFileObject (GObject.GObject):
+
+    # This class carries information about a file or a folder
+
+    def __init__ (self, name, path, is_folder = False, parent_folder = None):
+        self.name = name
+        self.parent_folder = parent_folder
+        self.is_folder = is_folder
+
+        if self.is_folder == False:
+            try:
+                # Try to create the file and open it for read/write
+                self.file_obj = open(path, "x+")
+            except FileExistsError:
+                # If the file exists then we can do a read/write starting from the
+                # beginning of the file
+                self.file_obj = open (path, "r+")
+        else:
+            # Lets try to make a folder
+            try:
+                os.makedirs (path)
+            except OSError as exception:
+                if exception.errno != errno.EEXIST:
+                    raise
+
+    def get_name (self):
+        return self.name
+
+    def set_name (self, name):
+        self.name = name
+
+    def get_parent_folder (self):
+        return self.parent_folder
+
+    def set_parent_folder (self, parent_folder):
+        self.parent_folder = parent_folder
+
+    def get_file_object (self):
+        return self.file_obj
+
+    def get_is_folder (self):
+        return self.is_folder
+
+    def close (self):
+        self.file_obj.close ()
+
 class MarkItFileManager (GObject.GObject):
 
     # This class is made to load, create and delete files which have been produced
@@ -15,8 +61,8 @@ class MarkItFileManager (GObject.GObject):
     # These are then displayed on the file sidebar
 
     __gsignals__ = {
-        'file-added': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'file-removed': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+        'file_added': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'file_removed': (GObject.SIGNAL_RUN_FIRST, None, (str,))
     }
 
     def __init__ (self):
@@ -32,16 +78,20 @@ class MarkItFileManager (GObject.GObject):
             if exception.errno != errno.EEXIST:
                 raise
 
-        # Now we get all the files in the directory
+        # Now we recursively get all the files in the directory
         self.file_list = list ()
 
-        for filename in os.listdir (self.app_dir):
-            self.file_count += 1
-            file_path = self.app_dir + filename
-            file_object = open (file_path, 'r+')
-            self.file_list.append (file_object)
-            if filename[0:8] == "Untitled":
-                self.untitled_count += 1
+        for root, dirs, filenames in os.walk (self.app_dir):
+            for directory in dirs:
+                os.path.join (root, directory)
+            for filename in filenames:
+                self.file_count += 1
+                file_path = root + "/" + filename
+                print (file_path)
+                file_object = MarkItFileObject (filename, file_path)
+                self.file_list.append (file_object)
+                if filename[0:8] == "Untitled":
+                    self.untitled_count += 1
 
         self.file_list = self.sort_file_list (self.file_list)
 
@@ -55,29 +105,32 @@ class MarkItFileManager (GObject.GObject):
         self.untitled_count += 1
         self.file_count += 1
         filename = "Untitled " + str (self.untitled_count)
-        filepath = self.app_dir + filename
+        file_path = self.app_dir + filename
 
         try:
-            file_object = open (filepath, 'a+')
+            file_object = MarkItFileObject (filename, file_path)
             self.file_list.append (file_object)
             self.file_list = self.sort_file_list (self.file_list)
-            self.emit ("file-added", filename)
+            self.emit ("file_added", filename)
         except IOError as error:
             raise
 
+    def create_new_folder (self, folder_name):
+        pass
+
     def get_file_object_from_name (self, name):
         for file_object in self.file_list:
-            if self.path_to_name (file_object.name) == name:
+            if file_object.get_name () == name:
                 return file_object
 
         return None
 
     def get_index_of_file (self, name):
-        for file_object in self.file_list:
-            if self.path_to_name(file_object.name) == name:
-                return self.file_list.index (file_object)
+        for index, file_obj in enumerate (self.file_list):
+            if file_obj.get_name () == name:
+                return index
 
-        return None
+        return 0
 
     def path_to_name (self, path):
         return path [len (self.app_dir):]
@@ -85,7 +138,7 @@ class MarkItFileManager (GObject.GObject):
     def sort_file_list (self, file_list):
         name_list = list ()
         for file_object in file_list:
-            name_list.append (file_object.name)
+            name_list.append (file_object.get_name ())
 
         name_list.sort ()
 
@@ -94,7 +147,7 @@ class MarkItFileManager (GObject.GObject):
         for name in name_list:
             # Find the file object corresponding to it
             for file_object in file_list:
-                if file_object.name == name:
+                if file_object.get_name () == name:
                     sorted_list.insert (name_list.index (name), file_object)
 
         return sorted_list

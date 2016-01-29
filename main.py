@@ -33,14 +33,14 @@ class MarkItWindow(Gtk.Window):
         self.box = Gtk.Box ()
         self.paned = Gtk.Paned ()
 
-        self.sidebar = MarkItSidebar (self.file_manager)
-        self.sidebar.connect ("row-clicked", self.on_row_clicked)
+        self.stack = MarkItStack (self.file_manager)
+        self.stack.show_all ()
+
+        self.sidebar = MarkItSidebar (self.file_manager, self.stack)
+        self.sidebar.connect ("active_file_changed", self.on_active_file_changed)
         self.paned.add1 (self.sidebar)
         self.document_nav_header.set_size_request (self.sidebar.get_size_request()[0], -1)
         self.sidebar.connect ("size_allocate", self.on_sidebar_size_change)
-
-        self.stack = MarkItStack (self.file_manager)
-        self.stack.show_all ()
 
         self.paned.add2 (self.stack)
         self.box.pack_start (self.paned, True, True, 0)
@@ -48,8 +48,7 @@ class MarkItWindow(Gtk.Window):
         self.add (self.box)
 
     def create_titlebar (self):
-
-        # Make the headerbar
+        # Make the titlebar
         # This is for document specific actions
         self.right_header = Gtk.HeaderBar ()
         self.right_header.set_title ("Untitled 1")
@@ -85,16 +84,17 @@ class MarkItWindow(Gtk.Window):
         self.file_manager.create_new_file ()
 
     def create_new_folder (self, *args):
+        # We want to add a new row to the document viewer, except make it a folder
         pass
 
-    def on_row_clicked (self, *args):
-        self.stack.set_visible_child_name (args[1])
+    def on_active_file_changed (self, *args):
         self.right_header.set_title (args[1])
 
     def on_sidebar_size_change (self, widget, allocation):
         self.document_nav_header.set_size_request (allocation.width, -1)
 
     def on_close (self, *args):
+        # We don't want to close while some files are still saving
         for file_object in self.file_manager.get_file_list ():
             while threading.activeCount() > 1:
                 pass

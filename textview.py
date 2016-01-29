@@ -34,7 +34,7 @@ class MarkItTextView (GtkSource.View):
     def __init__(self, source_file):
         Gtk.TextView.__init__ (self)
 
-        self.source_file = source_file
+        self.source_file = source_file.get_file_object ()
 
         # Set up a threaded timer to auto save the buffer
         self.is_typing = False
@@ -68,13 +68,13 @@ class MarkItTextView (GtkSource.View):
         self.get_buffer ().connect("changed", self.on_text_changed)
         self.get_buffer ().connect ("insert-text", self.on_text_insert)
 
-        self.get_buffer().set_text (source_file.read())
+        self.get_buffer().set_text (self.source_file.read())
 
     def save_file (self):
         self.source_file.seek (0)
         self.source_file.write (self.get_buffer().get_text
                 (self.get_buffer().get_bounds () [0],
-                 self.get_buffer().get_bounds ()[1], False))
+                 self.get_buffer().get_bounds () [1], False))
         self.source_file.truncate ()
 
     def create_tags (self, buff):

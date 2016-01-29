@@ -23,7 +23,7 @@ class MarkItStack (Gtk.Stack):
 
     def setup_pages (self):
         for file_object in self.file_manager.get_file_list ():
-            self.add_page (self.file_manager.path_to_name (file_object.name))
+            self.add_page (file_object.get_name ())
 
     def add_page (self, name):
         text_view = MarkItTextView (self.file_manager.get_file_object_from_name (name))
