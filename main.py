@@ -22,7 +22,7 @@ class MarkItWindow(Gtk.Window):
         style = Gtk.CssProvider ()
         style.load_from_path ("style.css")
         self.get_style_context ().add_provider_for_screen (Gdk.Screen.get_default (),
-                                                           style, Gtk.STYLE_PROVIDER_PRIORITY_THEME)
+                                                           style, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
         self.create_interface ()
 
@@ -51,7 +51,7 @@ class MarkItWindow(Gtk.Window):
         # Make the titlebar
         # This is for document specific actions
         self.right_header = Gtk.HeaderBar ()
-        self.right_header.set_title ("Untitled 1")
+        self.right_header.set_title ("Untitled 1") # TODO: Replace this with the loaded file
         self.right_header.set_show_close_button (True)
         self.right_header.get_style_context().add_class("titlebar")
         self.right_header.get_style_context().add_class("markit-right-header")
@@ -71,6 +71,35 @@ class MarkItWindow(Gtk.Window):
         new_folder_button.connect ('clicked', self.create_new_folder)
         self.document_nav_header.pack_start (new_folder_button)
 
+        # This is for buttons related to file editing
+
+        undo_button = Gtk.Button ().new_from_icon_name ("edit-undo-symbolic", 1)
+        redo_button = Gtk.Button ().new_from_icon_name ("edit-redo-symbolic", 1)
+        self.right_header.pack_start (undo_button)
+        self.right_header.pack_start (redo_button)
+
+        search_button = Gtk.Button ().new_from_icon_name ("edit-find-symbolic", 1)
+        self.right_header.pack_start (search_button)
+
+        export_button = Gtk.Button ().new_from_icon_name ("document-export-symbolic", 1)
+        self.right_header.pack_start (export_button)
+
+        # End
+
+        preferences_button = Gtk.Button ().new_from_icon_name ("view-more-symbolic", 1)
+        self.right_header.pack_end (preferences_button)
+
+        self.right_header.pack_end (Gtk.Separator.new (Gtk.Orientation.VERTICAL))
+
+        delete_button = Gtk.Button ().new_from_icon_name ("user-trash-symbolic", 1)
+        self.right_header.pack_end (delete_button)
+
+        timeline_button = Gtk.Button ().new_from_icon_name ("document-open-recent-symbolic", 1)
+        self.right_header.pack_end (timeline_button)
+
+        upload_button = Gtk.Button ().new_from_icon_name ("send-to-symbolic", 1)
+        self.right_header.pack_end (upload_button)
+
         self.header_box = Gtk.Box ()
         self.header_box.pack_start (self.document_nav_header, False, False, 0)
         self.header_box.pack_start (Gtk.Separator.new (Gtk.Orientation.VERTICAL), False, False, 0)
@@ -85,7 +114,38 @@ class MarkItWindow(Gtk.Window):
 
     def create_new_folder (self, *args):
         # We want to add a new row to the document viewer, except make it a folder
-        pass
+        # Lets make a dialog to get the name of the folder
+        name_dialog = Gtk.Dialog ()
+        dialog_content = name_dialog.get_content_area ()
+
+        name_entry = Gtk.Entry ()
+        default_name = "Untitled Folder " + str(self.file_manager.folder_count + 1)
+        name_entry.set_text (default_name)
+        name_entry.set_margin_left (12)
+        name_entry.set_margin_right (12)
+        name_entry.set_margin_top (12)
+        name_entry.set_margin_bottom (12)
+        dialog_content.add (name_entry)
+
+        name_dialog.add_button ("Cancel", 0)
+        name_dialog.add_button ("Create", 1)
+
+        name_dialog.set_modal (True)
+        name_dialog.set_transient_for (self)
+
+        name_dialog.set_title ("Create New Folder")
+
+        name_dialog.show_all ()
+        name_dialog.connect ("response", self.on_folder_dialog_response)
+        name_dialog.run ()
+
+    def on_folder_dialog_response (self, dialog, id):
+        if id == 1:
+            name = dialog.get_content_area ().get_children ()[0].get_text ()
+            self.file_manager.create_new_folder (name)
+
+        dialog.destroy ()
+
 
     def on_active_file_changed (self, *args):
         self.right_header.set_title (args[1])

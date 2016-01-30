@@ -1,3 +1,7 @@
-.markit-sidebar-row {
-    padding: 14px;
+.markit-sidebar .list-row {
+    padding: 6px;
+}
+
+.view {
+    padding: 3px;
 }

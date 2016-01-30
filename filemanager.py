@@ -13,6 +13,7 @@ class MarkItFileObject (GObject.GObject):
         self.name = name
         self.parent_folder = parent_folder
         self.is_folder = is_folder
+        self.file_obj = None
 
         if self.is_folder == False:
             try:
@@ -22,13 +23,6 @@ class MarkItFileObject (GObject.GObject):
                 # If the file exists then we can do a read/write starting from the
                 # beginning of the file
                 self.file_obj = open (path, "r+")
-        else:
-            # Lets try to make a folder
-            try:
-                os.makedirs (path)
-            except OSError as exception:
-                if exception.errno != errno.EEXIST:
-                    raise
 
     def get_name (self):
         return self.name
@@ -72,31 +66,47 @@ class MarkItFileManager (GObject.GObject):
         self.app_dir = os.path.expanduser ("~") + "/Documents/MarkIt/"
         self.file_count = 0
         self.untitled_count = 0
+        self.folder_count = 0
         try:
             os.makedirs (self.app_dir)
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise
 
-        # Now we recursively get all the files in the directory
+        # Now we recursively get all the files and folders in the directory
         self.file_list = list ()
+        self.folder_list = list ()
 
         for root, dirs, filenames in os.walk (self.app_dir):
             for directory in dirs:
+                # Add the folder to our list
+                parent_dir = root[len(self.app_dir):]
+                if root == self.app_dir:
+                    parent_dir = None
+                folder_obj = MarkItFileObject (directory, root + "/" + directory,
+                                               is_folder = True,
+                                               parent_folder = parent_dir)
+                self.folder_list.append (folder_obj)
                 os.path.join (root, directory)
             for filename in filenames:
                 self.file_count += 1
                 file_path = root + "/" + filename
-                print (file_path)
-                file_object = MarkItFileObject (filename, file_path)
+                parent_dir = root[len(self.app_dir):]
+                if root == self.app_dir:
+                    parent_dir = None
+                file_object = MarkItFileObject (filename, file_path, is_folder = False, parent_folder = parent_dir)
                 self.file_list.append (file_object)
                 if filename[0:8] == "Untitled":
                     self.untitled_count += 1
 
         self.file_list = self.sort_file_list (self.file_list)
+        self.folder_list = self.sort_file_list (self.folder_list)
 
     def get_file_list (self):
         return self.file_list
+
+    def get_folder_list (self):
+        return self.folder_list
 
     def get_app_dir (self):
         return self.app_dir
@@ -116,7 +126,16 @@ class MarkItFileManager (GObject.GObject):
             raise
 
     def create_new_folder (self, folder_name):
-        pass
+        # Make new folder
+        try:
+            path = self.app_dir + folder_name
+            os.makedirs (path)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+
+        # Make a new folder object
+        folder_obj = MarkItFileObject (folder_name, self.app_dir + folder_name, is_folder = True)
 
     def get_file_object_from_name (self, name):
         for file_object in self.file_list:
