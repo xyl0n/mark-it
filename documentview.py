@@ -6,6 +6,11 @@ from filemanager import MarkItFileManager
 
 class MarkItDocumentView (Gtk.TreeView):
 
+    TARGETS = [
+        (Gtk.TargetEntry.new ("File Row", Gtk.TargetFlags.SAME_WIDGET, 0)),
+        (Gtk.TargetEntry.new ("Folder Row", Gtk.TargetFlags.SAME_WIDGET, 1))
+    ]
+
     def __init__ (self, file_manager):
         Gtk.TreeView.__init__ (self)
         # General settings
@@ -14,6 +19,13 @@ class MarkItDocumentView (Gtk.TreeView):
         self.connect ("row_activated", self.on_row_clicked)
 
         self.get_style_context ().add_class ("list")
+
+        self.enable_model_drag_source (Gdk.ModifierType.BUTTON1_MASK,
+                                       self.TARGETS, Gdk.DragAction.MOVE)
+        self.enable_model_drag_dest (self.TARGETS,
+                                     Gdk.DragAction.MOVE)
+        self.connect("drag_data_get", self.on_drag_data_get)
+        self.connect("drag_data_received", self.on_drag_data_receive)
 
         # Make columns - Just one for now for the file name
         name_renderer = Gtk.CellRendererText()
@@ -24,18 +36,35 @@ class MarkItDocumentView (Gtk.TreeView):
 
         self.set_model (self.tree_store)
 
-        self.folder_iters = {}
+        self.folder_iters = {} # A dictionary to store the iter for each folder
 
         for folder_obj in file_manager.get_folder_list ():
-            folder_iter = self.tree_store.append (None, [folder_obj.get_name ()])
-            self.folder_iters[folder_obj.get_name ()] = folder_iter
+            if folder_obj.get_parent_folder () == None:
+                folder_iter = self.tree_store.append (None, [folder_obj.get_name ()])
+                self.folder_iters[folder_obj.get_name ()] = folder_iter
+
+        for folder_obj in file_manager.get_folder_list ():
+            # We want to add a row under the parent folder
+            if self.folder_iters.get (folder_obj.get_parent_folder ()) != None:
+                print ("HELLO")
+                parent_iter = self.folder_iters [folder_obj.get_parent_folder ()]
+                folder_iter = self.tree_store.append (parent_iter, [folder_obj.get_name ()])
+                self.folder_iters[folder_obj.get_name ()] = folder_iter
+
 
         for file_obj in file_manager.get_file_list ():
             if file_obj.get_is_folder () == False:
                 if file_obj.get_parent_folder () == None:
                     file_iter = self.tree_store.append (None, [file_obj.get_name ()])
                 else:
-                    parent_folder_iter = self.folder_iters[file_obj.get_parent_folder ()]
+                    last_index = file_obj.get_parent_folder ().rfind("/")
+                    print (last_index)
+                    if last_index == -1:
+                        parent_string = file_obj.get_parent_folder ()
+                    else:
+                        parent_string = file_obj.get_parent_folder ()[last_index + 1:]
+
+                    parent_folder_iter = self.folder_iters[parent_string]
                     file_iter = self.tree_store.append (parent_folder_iter, [file_obj.get_name ()])
 
         self.show_all ()
@@ -43,6 +72,15 @@ class MarkItDocumentView (Gtk.TreeView):
     def add_row (self, file_obj):
         if file_obj.get_parent_folder () == None:
             self.tree_store.append (None, [file_obj.get_name ()])
+
+    def get_path_for_folder (self, folder_obj):
+        pass
+
+    def on_drag_data_get (self, treeview, context, selection_data, target_id, time):
+        pass
+
+    def on_drag_data_receive (self, treeview, context, x, y, selection_data, target_id, time):
+        pass
 
     def on_row_clicked (self, tree, path, column):
 
