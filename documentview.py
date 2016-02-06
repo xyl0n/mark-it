@@ -13,6 +13,10 @@ class MarkItDocumentView (Gtk.TreeView):
         (Gtk.TargetEntry.new ("Folder Row", Gtk.TargetFlags.SAME_WIDGET, 1))
     ]
 
+    __gsignals__ = {
+        'file_clicked': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+    }
+
     def __init__ (self, file_manager):
         Gtk.TreeView.__init__ (self)
         # General settings
@@ -21,7 +25,8 @@ class MarkItDocumentView (Gtk.TreeView):
         self.connect ("row_activated", self.on_row_clicked)
         self.file_manager = file_manager
 
-        self.get_style_context ().add_class ("list")
+        self.get_style_context().add_class ("sidebar")
+        self.get_style_context().add_class ("view")
 
         self.enable_model_drag_source (Gdk.ModifierType.BUTTON1_MASK,
                                        self.TARGETS, Gdk.DragAction.MOVE)
@@ -59,6 +64,7 @@ class MarkItDocumentView (Gtk.TreeView):
                     parent_folder_iter = self.folder_iters[parent_string]
                     file_iter = self.tree_store.append (parent_folder_iter, [file_obj.get_name ()])
 
+        self.get_selection ().connect ("changed", self.on_selection_change)
         self.show_all ()
 
     def add_folders (self, folder_list, call_number):
@@ -71,8 +77,8 @@ class MarkItDocumentView (Gtk.TreeView):
                 self.folder_iters[folder_obj.get_name ()] = folder_iter
             else:
                 # These folders have a parent folder
-                last_index = folder_obj.get_parent_folder ().rfind("/")
-                #print (last_index)
+                last_index = folder_obj.get_parent_folder ().rfind("/") # We only want the parent directory, not the whole path
+                                                                        # This should ideally be done when creating the object
                 if last_index == -1:
                     parent_string = folder_obj.get_parent_folder ()
                 else:
@@ -100,6 +106,11 @@ class MarkItDocumentView (Gtk.TreeView):
     def get_path_for_folder (self, folder_obj):
         pass
 
+    def on_selection_change (self, selection):
+        store, paths = selection.get_selected_rows ()
+        # Idk
+
+
     def on_drag_data_get (self, treeview, context, selection_data, target_id, time):
         pass
 
@@ -114,8 +125,6 @@ class MarkItDocumentView (Gtk.TreeView):
             tree_iter = tree.get_model ().get_iter (path)
             value = model.get_value(tree_iter,0)
             print (value)
-
-        self.get_selection ().unselect_all ()
 
 '''
 class MarkItDocumentView (Gtk.ListBox):

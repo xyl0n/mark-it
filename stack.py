@@ -15,18 +15,12 @@ class MarkItStack (Gtk.Stack):
         self.set_transition_duration (100)
 
         self.file_manager = files
-        self.file_manager.connect ('file-added', self.on_file_added)
-
-        self.setup_pages ()
+        self.file_manager.connect ('file_opened', self.on_file_open)
 
         self.show_all ()
 
-    def setup_pages (self):
-        for file_object in self.file_manager.get_file_list ():
-            self.add_page (file_object.get_name ())
-
-    def add_page (self, name):
-        text_view = MarkItTextView (self.file_manager.get_file_object_from_name (name))
+    def add_page (self, path):
+        text_view = MarkItTextView (self.file_manager.get_file_object_from_path (path))
         text_scrolled = Gtk.ScrolledWindow ()
         text_scrolled.add (text_view)
 
@@ -35,11 +29,5 @@ class MarkItStack (Gtk.Stack):
 
         self.show_all ()
 
-    def on_file_added (self, *args):
+    def on_file_open (self, *args):
         self.add_page (args[1])
-
-    def join_threads (self):
-        for scrolled_child in self.get_children ():
-            # This should give us the scrolled window
-            for text_view in scrolled_child.get_children ():
-                text_view.join_thread ()

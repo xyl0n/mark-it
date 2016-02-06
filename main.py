@@ -17,7 +17,9 @@ class MarkItWindow(Gtk.Window):
         self.set_default_size (1200, 800)
         self.connect ("delete-event", self.on_close)
 
-        self.file_manager = MarkItFileManager ()
+        self.load_settings ()
+
+        self.file_manager = MarkItFileManager (self.opened_files)
 
         style = Gtk.CssProvider ()
         style.load_from_path ("style.css")
@@ -25,6 +27,14 @@ class MarkItWindow(Gtk.Window):
                                                            style, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
         self.create_interface ()
+
+    def load_settings (self):
+        self.app_settings = Gio.Settings.new ("org.gnome.mark-it.saved-state")
+        self.opened_files = list ()
+
+        for file_path in self.app_settings.get_strv("opened-files"):
+            if file_path != '':
+                self.opened_files.append (file_path)
 
     def create_interface (self):
 
@@ -146,7 +156,6 @@ class MarkItWindow(Gtk.Window):
 
         dialog.destroy ()
 
-
     def on_active_file_changed (self, *args):
         self.right_header.set_title (args[1])
 
@@ -161,7 +170,17 @@ class MarkItWindow(Gtk.Window):
             else:
                 file_object.close ()
 
+        # Write some settings
+        # Get the open files
+
+        open_paths = list ()
+        for file_obj in self.file_manager.get_open_files ():
+            open_paths.append (file_obj.get_path ())
+
+        self.app_settings.set_strv ("opened-files", open_paths)
+
+        Gtk.main_quit ()
+
 window = MarkItWindow ()
-window.connect('delete-event', Gtk.main_quit)
 window.show_all ()
 Gtk.main ()

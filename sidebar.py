@@ -13,7 +13,6 @@ class MarkItSidebar (Gtk.Box):
         'active_file_changed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
-
     def __init__ (self, file_manager, view_stack):
         Gtk.Box.__init__ (self)
 
@@ -23,15 +22,17 @@ class MarkItSidebar (Gtk.Box):
         self.set_orientation (Gtk.Orientation.VERTICAL)
         self.set_size_request (200, -1)
         self.get_style_context().add_class ("markit-sidebar")
-        self.get_style_context().add_class ("sidebar")
-        self.get_style_context().add_class ("view")
-        self.file_manager.connect ("file_added", self.on_file_added)
-
-        if len(self.file_manager.get_file_list()) == 0:
-            self.file_manager.create_new_file ()
 
         self.setup_workspace_view ()
         self.setup_document_view ()
+
+        self.file_manager.connect ("file_created", self.on_file_creation)
+        self.file_manager.connect ("file_opened", self.on_file_open)
+
+        if len(self.file_manager.get_file_list()) == 0:
+            self.file_manager.create_new_file () # TODO: if opened files are also zero
+
+        self.document_view.connect ("cursor_changed", lambda *args: self.workspace_view.unselect_all ())
 
     def setup_workspace_view (self):
         workspace_label = Gtk.Label ("<b>Workspace</b>")
@@ -58,15 +59,22 @@ class MarkItSidebar (Gtk.Box):
 
         self.pack_end (self.document_view, True, True, 0)
 
-    def on_file_added (self, *args):
+    def on_file_creation (self, *args):
         # Insert a new entry on document browser
         file_obj = self.file_manager.get_file_object_from_name (args[1])
         self.document_view.add_row (file_obj)
-        # TODO: Add new page to stack
+
+    def on_file_open (self, *args):
+        # Insert a new row on the workspace view
+        file_obj = self.file_manager.get_file_object_from_path (args[1])
+        self.workspace_view.add_row (file_obj)
 
     def on_workspace_file_clicked (self, *args):
-        self.stack.set_visible_child_name (args[1])
-        self.emit ('active_file_changed', args[1])
+        file_obj = self.file_manager.get_file_object_from_path (args[1])
+        name = file_obj.get_name ()
+        self.stack.set_visible_child_name (name)
+        self.emit ('active_file_changed', name)
+        self.document_view.get_selection ().unselect_all ()
 
 '''
 class MarkItSidebar (Gtk.Box):

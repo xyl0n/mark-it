@@ -14,18 +14,24 @@ class MarkItFileObject (GObject.GObject):
         self.parent_folder = parent_folder
         self.is_folder = is_folder
         self.file_obj = None
+        self.path = path
 
-        if self.is_folder == False:
-            try:
-                # Try to create the file and open it for read/write
-                self.file_obj = open(path, "x+")
-            except FileExistsError:
-                # If the file exists then we can do a read/write starting from the
-                # beginning of the file
-                self.file_obj = open (path, "r+")
+        self.is_open = False
 
     def get_name (self):
         return self.name
+
+    def open_file (self):
+        if self.is_folder == False:
+            try:
+                # Try to create the file and open it for read/write
+                self.file_obj = open(self.path, "x+")
+                self.is_open = True
+            except FileExistsError:
+                # If the file exists then we can do a read/write starting from the
+                # beginning of the file
+                self.file_obj = open (self.path, "r+")
+                self.is_open = True
 
     def set_name (self, name):
         self.name = name
@@ -42,8 +48,15 @@ class MarkItFileObject (GObject.GObject):
     def get_is_folder (self):
         return self.is_folder
 
+    def get_path (self):
+        return self.path
+
+    def get_is_open (self):
+        return is_open
+
     def close (self):
         self.file_obj.close ()
+        self.is_open = False
 
 class MarkItFileManager (GObject.GObject):
 
@@ -55,11 +68,12 @@ class MarkItFileManager (GObject.GObject):
     # These are then displayed on the file sidebar
 
     __gsignals__ = {
-        'file_added': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'file_removed': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+        'file_created': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'file_deleted': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'file_opened': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
-    def __init__ (self):
+    def __init__ (self, open_files):
         # If this is the first run, we won't have a directory, so lets try to
         # create one if it doesn't exist
         GObject.GObject.__init__ (self)
@@ -90,17 +104,24 @@ class MarkItFileManager (GObject.GObject):
                 os.path.join (root, directory)
             for filename in filenames:
                 self.file_count += 1
-                file_path = root + "/" + filename
+                file_path = root + filename
                 parent_dir = root[len(self.app_dir):]
                 if root == self.app_dir:
                     parent_dir = None
-                file_object = MarkItFileObject (filename, file_path, is_folder = False, parent_folder = parent_dir)
+                file_object = MarkItFileObject (filename, file_path,
+                                                is_folder = False,
+                                                parent_folder = parent_dir)
                 self.file_list.append (file_object)
                 if filename[0:8] == "Untitled":
                     self.untitled_count += 1
 
         self.file_list = self.sort_file_list (self.file_list)
         self.folder_list = self.sort_file_list (self.folder_list)
+
+        # Open the file so we can I/O
+        self.open_files = list ()
+        for file_path in open_files:
+            self.open_file (file_path)
 
     def get_file_list (self):
         return self.file_list
@@ -110,6 +131,22 @@ class MarkItFileManager (GObject.GObject):
 
     def get_app_dir (self):
         return self.app_dir
+
+    def get_open_files (self):
+        return self.open_files
+
+    def close_file (self, path):
+        file_obj = self.get_file_object_from_path (path)
+        if file_obj.get_is_open () == True:
+            file_obj.close ()
+
+    # IMPORTANT: Always use this function to open a file instead of accessing
+    # the file object directly since we need to emit the file_opened signal
+    def open_file (self, path):
+        file_obj = self.get_file_object_from_path (path)
+        file_obj.open_file ()
+        self.open_files.append (file_obj)
+        self.emit ("file_opened", path)
 
     def create_new_file (self):
         self.untitled_count += 1
@@ -121,7 +158,8 @@ class MarkItFileManager (GObject.GObject):
             file_object = MarkItFileObject (filename, file_path)
             self.file_list.append (file_object)
             self.file_list = self.sort_file_list (self.file_list)
-            self.emit ("file_added", filename)
+            self.open_file (file_path)
+            self.emit ("file_created", filename)
         except IOError as error:
             raise
 
@@ -140,6 +178,13 @@ class MarkItFileManager (GObject.GObject):
     def get_file_object_from_name (self, name):
         for file_object in self.file_list:
             if file_object.get_name () == name:
+                return file_object
+
+        return None
+
+    def get_file_object_from_path (self, path):
+        for file_object in self.file_list:
+            if file_object.get_path () == path:
                 return file_object
 
         return None

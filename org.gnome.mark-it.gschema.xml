@@ -1,0 +1,9 @@
+<schemalist>
+    <schema path="/org/gnome/mark-it/saved-state/" id="org.gnome.mark-it.saved-state" gettext-domain="mark-it">
+        <key type="as" name="opened-files">
+            <default>['']</default>
+            <summary>Files which have been opened from a previous session</summary>
+            <description>Allows Mark It to reopen files which are being worked on</description>
+        </key>
+    </schema>
+</schemalist>
