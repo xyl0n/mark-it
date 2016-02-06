@@ -18,5 +18,5 @@ Not entirely sure how to distribute python apps, you need to run the following t
 
 Then you can run the app by doing:
 ```
-# python3 ./main.py
+$ python3 ./main.py
 ```
