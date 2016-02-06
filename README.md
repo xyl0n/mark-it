@@ -20,4 +20,3 @@ Then you can run the app by doing:
 ```
 $ python3 ./main.py
 ```
-
