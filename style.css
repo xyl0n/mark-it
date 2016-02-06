@@ -5,3 +5,14 @@
 .view {
     padding: 3px;
 }
+
+.button.flat.mark-it-document-close {
+    padding: 0px;
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+.button.flat.mark-it-document-close:hover {
+    color: @theme_selected_fg_color;
+}

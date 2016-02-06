@@ -47,6 +47,7 @@ class MarkItSidebar (Gtk.Box):
         self.pack_start (self.workspace_view, False, False, 0)
 
         self.workspace_view.connect ('file_clicked', self.on_workspace_file_clicked)
+        self.workspace_view.connect ('file_closed', self.on_workspace_file_closed)
 
     def setup_document_view (self):
         doc_label = Gtk.Label ("<b>Documents</b>")
@@ -59,6 +60,8 @@ class MarkItSidebar (Gtk.Box):
 
         self.pack_end (self.document_view, True, True, 0)
 
+        self.document_view.connect ("file_clicked", self.on_document_file_clicked)
+
     def on_file_creation (self, *args):
         # Insert a new entry on document browser
         file_obj = self.file_manager.get_file_object_from_name (args[1])
@@ -70,11 +73,20 @@ class MarkItSidebar (Gtk.Box):
         self.workspace_view.add_row (file_obj)
 
     def on_workspace_file_clicked (self, *args):
-        file_obj = self.file_manager.get_file_object_from_path (args[1])
-        name = file_obj.get_name ()
-        self.stack.set_visible_child_name (name)
+        self.stack.set_visible_child_name (args[1])
+        name = self.file_manager.path_to_name (args[1])
         self.emit ('active_file_changed', name)
         self.document_view.get_selection ().unselect_all ()
+
+    def on_document_file_clicked (self, *args):
+        self.file_manager.open_file (args[1])
+
+    def on_workspace_file_closed (self, *args):
+        self.file_manager.close_file (args[1])
+
+    def hide_widgets (self):
+        for widget in self.workspace_view.hidden_widgets:
+            widget.hide ()
 
 '''
 class MarkItSidebar (Gtk.Box):

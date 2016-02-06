@@ -52,7 +52,7 @@ class MarkItFileObject (GObject.GObject):
         return self.path
 
     def get_is_open (self):
-        return is_open
+        return self.is_open
 
     def close (self):
         self.file_obj.close ()
@@ -104,7 +104,11 @@ class MarkItFileManager (GObject.GObject):
                 os.path.join (root, directory)
             for filename in filenames:
                 self.file_count += 1
-                file_path = root + filename
+                if root[-1:] != "/":
+                    file_path = root + "/" + filename
+                else:
+                    file_path = root + filename
+
                 parent_dir = root[len(self.app_dir):]
                 if root == self.app_dir:
                     parent_dir = None
@@ -140,13 +144,21 @@ class MarkItFileManager (GObject.GObject):
         if file_obj.get_is_open () == True:
             file_obj.close ()
 
+        self.open_files.remove (file_obj)
+
     # IMPORTANT: Always use this function to open a file instead of accessing
     # the file object directly since we need to emit the file_opened signal
     def open_file (self, path):
+        if path[-1:] == "/":
+            path = path[:-1]
+
+        print ("OPEN FILE: " + path)
         file_obj = self.get_file_object_from_path (path)
-        file_obj.open_file ()
-        self.open_files.append (file_obj)
-        self.emit ("file_opened", path)
+
+        if file_obj.get_is_open () != True:
+            file_obj.open_file ()
+            self.open_files.append (file_obj)
+            self.emit ("file_opened", path)
 
     def create_new_file (self):
         self.untitled_count += 1
@@ -183,9 +195,14 @@ class MarkItFileManager (GObject.GObject):
         return None
 
     def get_file_object_from_path (self, path):
+
         for file_object in self.file_list:
             if file_object.get_path () == path:
                 return file_object
+
+        for folder_object in self.folder_list:
+            if folder_object.get_path () == path:
+                return folder_object
 
         return None
 

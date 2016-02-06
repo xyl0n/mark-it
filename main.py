@@ -28,6 +28,10 @@ class MarkItWindow(Gtk.Window):
 
         self.create_interface ()
 
+        self.show_all ()
+
+        self.sidebar.hide_widgets ()
+
     def load_settings (self):
         self.app_settings = Gio.Settings.new ("org.gnome.mark-it.saved-state")
         self.opened_files = list ()
@@ -164,7 +168,7 @@ class MarkItWindow(Gtk.Window):
 
     def on_close (self, *args):
         # We don't want to close while some files are still saving
-        for file_object in self.file_manager.get_file_list ():
+        for file_object in self.file_manager.get_open_files ():
             while threading.activeCount() > 1:
                 pass
             else:
@@ -182,5 +186,4 @@ class MarkItWindow(Gtk.Window):
         Gtk.main_quit ()
 
 window = MarkItWindow ()
-window.show_all ()
 Gtk.main ()

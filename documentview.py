@@ -121,10 +121,26 @@ class MarkItDocumentView (Gtk.TreeView):
 
         (model, pathlist) = self.get_selection ().get_selected_rows()
 
-        for path in pathlist :
-            tree_iter = tree.get_model ().get_iter (path)
-            value = model.get_value(tree_iter,0)
-            print (value)
+        for path in pathlist:
+            directory_list = list ()
+
+            node_end = False
+
+            while node_end == False:
+                tree_iter = tree.get_model ().get_iter (path)
+                value = model.get_value(tree_iter, 0)
+                directory_list.append (value)
+                if path.get_depth () > 1:
+                    path.up ()
+                else:
+                    node_end = True
+
+
+        full_path = self.file_manager.get_app_dir ()
+        for name in list(reversed(directory_list)):
+            full_path += name + "/"
+
+        self.emit ("file_clicked", full_path)
 
 '''
 class MarkItDocumentView (Gtk.ListBox):
