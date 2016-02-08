@@ -31,6 +31,7 @@ class MarkItWindow(Gtk.Window):
         self.show_all ()
 
         self.sidebar.hide_widgets ()
+        self.sidebar.hide_widgets ()
 
     def load_settings (self):
         self.app_settings = Gio.Settings.new ("org.gnome.mark-it.saved-state")

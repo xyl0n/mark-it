@@ -150,7 +150,7 @@ class MarkItFileManager (GObject.GObject):
     # the file object directly since we need to emit the file_opened signal
     def open_file (self, path):
         if path[-1:] == "/":
-            path = path[:-1]
+            path = path[:-1] # Just remove any trailing forward slashes
 
         print ("OPEN FILE: " + path)
         file_obj = self.get_file_object_from_path (path)
@@ -214,7 +214,8 @@ class MarkItFileManager (GObject.GObject):
         return 0
 
     def path_to_name (self, path):
-        return path [len (self.app_dir):]
+        file_obj = self.get_file_object_from_path (path)
+        return file_obj.get_name ()
 
     def sort_file_list (self, file_list):
         name_list = list ()

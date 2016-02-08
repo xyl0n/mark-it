@@ -88,6 +88,9 @@ class MarkItSidebar (Gtk.Box):
         for widget in self.workspace_view.hidden_widgets:
             widget.hide ()
 
+        if self.workspace_view.initial_visible_widget != None:
+            self.workspace_view.initial_visible_widget.show ()
+
 '''
 class MarkItSidebar (Gtk.Box):
     # A class which handles the sidebar used to switch and present files

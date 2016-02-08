@@ -20,6 +20,8 @@ class MarkItWorkspaceView (Gtk.ListBox):
         self.hidden_widgets = list ()
         self.file_labels = list ()
 
+        self.initial_visible_widget = None
+
         self.button_width = 0
 
         self.mouse_hovering_on_label = False
@@ -27,6 +29,7 @@ class MarkItWorkspaceView (Gtk.ListBox):
 
         self.populate ()
         self.connect ('row_activated', self.on_row_clicked)
+        self.connect ('selected_rows_changed', self.on_selection_change)
 
     def on_row_clicked (self, listbox, row):
         file_path = self.path_row_index [row.get_index ()]
@@ -39,6 +42,14 @@ class MarkItWorkspaceView (Gtk.ListBox):
                 widget.hide ()
             else:
                 widget.show ()
+
+    def on_selection_change (self, listbox):
+
+        selected_rows = listbox.get_selected_rows ()
+        if len (selected_rows) == 0:
+            # None of the rows are selected
+            for widget in self.hidden_widgets:
+                widget.hide ()
 
     def populate (self):
 
@@ -54,6 +65,7 @@ class MarkItWorkspaceView (Gtk.ListBox):
     def add_row (self, file_object):
         file_label = Gtk.Label (file_object.get_name ())
         file_label.set_alignment (0.0, 0.5)
+        file_label.set_margin_left (16)
         file_label.get_style_context ().add_class ('markit-sidebar-row')
         self.file_labels.append (file_label)
 
@@ -63,25 +75,28 @@ class MarkItWorkspaceView (Gtk.ListBox):
         close_button = Gtk.Button.new_from_icon_name ("window-close-symbolic", 1)
         close_button.get_style_context ().add_class ("flat")
         close_button.get_style_context ().add_class ("mark-it-document-close")
-        self.hidden_widgets.append (close_button)
 
-        close_button.connect ("size_allocate", self.on_button_size_allocate)
-        close_button.connect ("show", self.on_button_show)
-        close_button.connect ("hide", self.on_button_hide)
         close_button.connect ("clicked", self.on_close_click)
 
         file_label.set_hexpand (True)
 
-        row_box.attach (close_button, 0, 0, 1, 1)
-        row_box.attach (file_label, 1, 0, 1, 1)
+        row_box.attach (close_button, 1, 0, 1, 1)
+        row_box.attach (file_label, 0, 0, 1, 1)
 
         row = Gtk.ListBoxRow ()
         row.add (row_box)
         self.insert (row, -1)
         row_num = row.get_index ()
+        self.hidden_widgets.append (close_button)
+        if row_num == 0:
+            self.initial_visible_widget = close_button
+
         self.path_row_index[row_num] = file_object.get_path ()
 
         self.show_all ()
+
+        for widget in self.hidden_widgets:
+            widget.hide ()
 
     def on_close_click (self, button):
         box = button.get_parent ()
@@ -97,9 +112,3 @@ class MarkItWorkspaceView (Gtk.ListBox):
     def on_button_hide (self, widget):
         for file_label in self.file_labels:
             file_label.set_margin_left (self.button_width + 4)
-
-    def on_button_size_allocate (self, widget, allocation):
-        if self.button_width == 0:
-            self.button_width = allocation.width
-            for file_label in self.file_labels:
-                file_label.set_margin_left (self.button_width)
