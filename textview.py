@@ -35,6 +35,7 @@ class MarkItTextView (GtkSource.View):
         Gtk.TextView.__init__ (self)
 
         self.source_file = source_file.get_file_object ()
+        self.source_file_path = source_file.get_path ()
 
         # Set up a threaded timer to auto save the buffer
         self.is_typing = False
@@ -76,6 +77,9 @@ class MarkItTextView (GtkSource.View):
                 (self.get_buffer().get_bounds () [0],
                  self.get_buffer().get_bounds () [1], False))
         self.source_file.truncate ()
+
+    def get_file_path (self):
+        return self.source_file_path
 
     def create_tags (self, buff):
         # Lets make some formatting tags

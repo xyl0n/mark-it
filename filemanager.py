@@ -71,6 +71,7 @@ class MarkItFileManager (GObject.GObject):
         'file_created': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_deleted': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_opened': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'file_closed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
     def __init__ (self, open_files):
@@ -141,8 +142,10 @@ class MarkItFileManager (GObject.GObject):
 
     def close_file (self, path):
         file_obj = self.get_file_object_from_path (path)
+        print ("file " + file_obj.get_name () + " is " + str(file_obj.get_is_open ()))
         if file_obj.get_is_open () == True:
             file_obj.close ()
+            self.emit ("file_closed", path)
 
         self.open_files.remove (file_obj)
 
@@ -152,7 +155,6 @@ class MarkItFileManager (GObject.GObject):
         if path[-1:] == "/":
             path = path[:-1] # Just remove any trailing forward slashes
 
-        print ("OPEN FILE: " + path)
         file_obj = self.get_file_object_from_path (path)
 
         if file_obj.get_is_open () != True:

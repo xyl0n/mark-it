@@ -5,14 +5,16 @@ from gi.repository import Gtk, GLib, GObject, GdkPixbuf, Gio, Pango, GtkSource, 
 from textview import MarkItTextView
 from filemanager import MarkItFileManager
 
-class MarkItStack (Gtk.Stack):
+class MarkItStack (Gtk.Notebook):
 
     def __init__ (self, files):
-        Gtk.Stack.__init__ (self)
+        Gtk.Notebook.__init__ (self)
 
-        self.set_homogeneous(True)
-        self.set_transition_type (Gtk.StackTransitionType.CROSSFADE)
-        self.set_transition_duration (100)
+        #self.set_show_tabs (False)
+        self.set_show_border (False)
+
+        self.text_view_list = list ()
+        self.total_pages = 0
 
         self.file_manager = files
         self.file_manager.connect ('file_opened', self.on_file_open)
@@ -27,15 +29,41 @@ class MarkItStack (Gtk.Stack):
             self.add_page (file_obj.get_path ())
 
     def add_page (self, path):
-        if self.get_child_by_name (path) == None:
-            text_view = MarkItTextView (self.file_manager.get_file_object_from_path (path))
-            text_scrolled = Gtk.ScrolledWindow ()
-            text_scrolled.add (text_view)
+        text_view = MarkItTextView (self.file_manager.get_file_object_from_path (path))
+        self.text_view_list.append (text_view)
+        text_scrolled = Gtk.ScrolledWindow ()
+        text_scrolled.add (text_view)
 
-            self.add_named (text_scrolled, path)
-            self.set_visible_child_name (path)
+        label = Gtk.Label (path)
+        self.append_page (text_scrolled, label)
+        self.total_pages += 1
+        num = self.get_page_number_for_path (path)
+        self.set_page (num)
 
-            self.show_all ()
+        self.show_all ()
+
+    def set_page (self, path):
+        tab_num = self.get_page_number_for_path (path)
+        if tab_num != None:
+            self.set_current_page (tab_num)
 
     def on_file_open (self, *args):
         self.add_page (args[1])
+
+    def get_page_number_for_path (self, path):
+        for tab_num in range (0, self.get_n_pages()):
+            page = self.get_nth_page (tab_num)
+            print (page)
+            if page.get_children ()[0].get_file_path () == path:
+                return tab_num
+
+        return None
+
+    def close_page (self, file_path):
+        num = self.get_page_number_for_path (file_path)
+        print ("File path being removed is: " + file_path)
+        self.remove_page (num)
+        if num == 0:
+            self.set_page (1)
+        else:
+            self.set_page (num - 1)

@@ -8,7 +8,7 @@ class MarkItWorkspaceView (Gtk.ListBox):
 
     __gsignals__ = {
         'file_clicked': (GObject.SIGNAL_RUN_FIRST, None, (str,)), # We use paths to identify files
-        'file_closed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'file_close_requested': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
     def __init__ (self, file_manager):
@@ -63,6 +63,7 @@ class MarkItWorkspaceView (Gtk.ListBox):
         self.show_all ()
 
     def add_row (self, file_object):
+        print ("row add requested to workspaceview")
         file_label = Gtk.Label (file_object.get_name ())
         file_label.set_alignment (0.0, 0.5)
         file_label.set_margin_left (16)
@@ -101,7 +102,7 @@ class MarkItWorkspaceView (Gtk.ListBox):
     def on_close_click (self, button):
         box = button.get_parent ()
         row = box.get_parent ()
-        self.emit ("file_closed", self.path_row_index[row.get_index()])
+        self.emit ("file_close_requested", self.path_row_index[row.get_index()])
 
         row.destroy ()
 
