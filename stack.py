@@ -60,6 +60,7 @@ class MarkItStack (Gtk.Notebook):
 
     def close_page (self, file_path, next_file_path):
         num = self.get_page_number_for_path (file_path)
+        self.get_nth_page (num).get_children ()[0].close_file ()
         self.remove_page (num)
         next_num = self.get_page_number_for_path (next_file_path)
         if next_num != None:

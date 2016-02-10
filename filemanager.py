@@ -5,6 +5,8 @@ import errno
 
 from gi.repository import GObject
 
+import threading
+
 class MarkItFileObject (GObject.GObject):
 
     # This class carries information about a file or a folder
@@ -143,7 +145,11 @@ class MarkItFileManager (GObject.GObject):
     def close_file (self, path):
         file_obj = self.get_file_object_from_path (path)
         if file_obj.get_is_open () == True:
-            file_obj.close ()
+            while threading.activeCount() > 1:
+                pass
+            else:
+                file_obj.close ()
+
             self.emit ("file_closed", path)
 
         self.open_files.remove (file_obj)

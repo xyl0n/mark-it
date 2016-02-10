@@ -140,4 +140,6 @@ class MarkItDocumentView (Gtk.TreeView):
         for name in list(reversed(directory_list)):
             full_path += name + "/"
 
+        full_path = full_path[:-1]
+
         self.emit ("file_clicked", full_path)

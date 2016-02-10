@@ -34,8 +34,6 @@ class MarkItWorkspaceView (Gtk.ListBox):
 
         self.initial_visible_widget = None
 
-        self.button_width = 0
-
         self.mouse_hovering_on_label = False
         self.mouse_hovering_on_button = False
 
@@ -130,6 +128,13 @@ class MarkItWorkspaceView (Gtk.ListBox):
         else:
             self.emit ("file_close_requested", row_path, None)
 
+
+    def get_row_for_path (self, path):
+        for row in self.get_children ():
+            if row.get_path () == path:
+                return row
+
+        return None
 
     def on_button_show (self, widget):
         for file_label in self.file_labels:

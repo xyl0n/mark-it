@@ -69,6 +69,8 @@ class MarkItSidebar (Gtk.Box):
 
     def on_file_open (self, *args):
         # Insert a new row on the workspace view
+        # I think checking if the file is already open is taken care of somewhere
+        # else so we're fine to do this
         file_obj = self.file_manager.get_file_object_from_path (args[1])
         self.workspace_view.add_row (file_obj)
 
@@ -79,12 +81,17 @@ class MarkItSidebar (Gtk.Box):
         self.document_view.get_selection ().unselect_all ()
 
     def on_document_file_clicked (self, *args):
-        self.file_manager.open_file (args[1])
+        file_obj = self.file_manager.get_file_object_from_path (args[1])
+        if file_obj.get_is_open () != True:
+            self.file_manager.open_file (args[1])
+
+        row = self.workspace_view.get_row_for_path (args[1])
+        if row != None:
+            self.workspace_view.select_row (row)
 
     def on_workspace_file_closed (self, *args):
-        # But first we need to close the gtk stack
+        # But first we need to close the pages
         self.stack.close_page (args[1], args[2])
-
         self.file_manager.close_file (args[1])
 
     def hide_widgets (self):

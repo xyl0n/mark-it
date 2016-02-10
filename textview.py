@@ -73,10 +73,14 @@ class MarkItTextView (GtkSource.View):
 
     def save_file (self):
         self.source_file.seek (0)
-        self.source_file.write (self.get_buffer().get_text
-                (self.get_buffer().get_bounds () [0],
-                 self.get_buffer().get_bounds () [1], False))
+        text = self.get_buffer().get_text (self.get_buffer().get_bounds () [0],
+                                           self.get_buffer().get_bounds () [1], False)
+        self.source_file.write (text)
         self.source_file.truncate ()
+
+
+    def close_file (self):
+        self.auto_save.join ()
 
     def get_file_path (self):
         return self.source_file_path
@@ -248,6 +252,3 @@ class MarkItTextView (GtkSource.View):
         # Use Gtk.TextMark maybe?
     def check_deletions (self, buff):
         pass
-
-    def join_thread (self):
-        self.auto_save.join ()
