@@ -10,7 +10,7 @@ class MarkItStack (Gtk.Notebook):
     def __init__ (self, files):
         Gtk.Notebook.__init__ (self)
 
-        #self.set_show_tabs (False)
+        self.set_show_tabs (False)
         self.set_show_border (False)
 
         self.text_view_list = list ()
@@ -25,7 +25,6 @@ class MarkItStack (Gtk.Notebook):
 
     def populate (self):
         for file_obj in self.file_manager.get_open_files ():
-            print ("adding: " + file_obj.get_path ())
             self.add_page (file_obj.get_path ())
 
     def add_page (self, path):
@@ -45,6 +44,7 @@ class MarkItStack (Gtk.Notebook):
     def set_page (self, path):
         tab_num = self.get_page_number_for_path (path)
         if tab_num != None:
+            page = self.get_nth_page (tab_num)
             self.set_current_page (tab_num)
 
     def on_file_open (self, *args):
@@ -53,17 +53,14 @@ class MarkItStack (Gtk.Notebook):
     def get_page_number_for_path (self, path):
         for tab_num in range (0, self.get_n_pages()):
             page = self.get_nth_page (tab_num)
-            print (page)
             if page.get_children ()[0].get_file_path () == path:
                 return tab_num
 
         return None
 
-    def close_page (self, file_path):
+    def close_page (self, file_path, next_file_path):
         num = self.get_page_number_for_path (file_path)
-        print ("File path being removed is: " + file_path)
         self.remove_page (num)
-        if num == 0:
-            self.set_page (1)
-        else:
-            self.set_page (num - 1)
+        next_num = self.get_page_number_for_path (next_file_path)
+        if next_num != None:
+            self.set_page (next_file_path)

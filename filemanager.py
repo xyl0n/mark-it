@@ -142,7 +142,6 @@ class MarkItFileManager (GObject.GObject):
 
     def close_file (self, path):
         file_obj = self.get_file_object_from_path (path)
-        print ("file " + file_obj.get_name () + " is " + str(file_obj.get_is_open ()))
         if file_obj.get_is_open () == True:
             file_obj.close ()
             self.emit ("file_closed", path)

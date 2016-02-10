@@ -83,7 +83,7 @@ class MarkItSidebar (Gtk.Box):
 
     def on_workspace_file_closed (self, *args):
         # But first we need to close the gtk stack
-        self.stack.close_page (args[1])
+        self.stack.close_page (args[1], args[2])
 
         self.file_manager.close_file (args[1])
 
