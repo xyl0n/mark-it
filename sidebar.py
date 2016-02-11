@@ -28,6 +28,7 @@ class MarkItSidebar (Gtk.Box):
 
         self.file_manager.connect ("file_created", self.on_file_creation)
         self.file_manager.connect ("file_opened", self.on_file_open)
+        self.file_manager.connect ("folder_created", self.on_folder_creation)
 
         if len(self.file_manager.get_file_list()) == 0:
             self.file_manager.create_new_file () # TODO: if opened files are also zero
@@ -66,6 +67,11 @@ class MarkItSidebar (Gtk.Box):
         # Insert a new entry on document browser
         file_obj = self.file_manager.get_file_object_from_name (args[1])
         self.document_view.add_row (file_obj)
+
+    def on_folder_creation (self, *args):
+
+        folder_obj = self.file_manager.get_file_object_from_path (args[1], is_folder = True)
+        self.document_view.add_row (folder_obj)
 
     def on_file_open (self, *args):
         # Insert a new row on the workspace view

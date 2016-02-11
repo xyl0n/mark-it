@@ -35,12 +35,17 @@ class MarkItDocumentView (Gtk.TreeView):
         self.connect("drag_data_get", self.on_drag_data_get)
         self.connect("drag_data_received", self.on_drag_data_receive)
 
-        # Make columns - Just one for now for the file name
+        # Make columns - One for file icon and one for file name
+
+        icon_renderer = Gtk.CellRendererPixbuf()
+        icon_column = Gtk.TreeViewColumn("File Icon", icon_renderer, icon_name = 1)
+        self.append_column (icon_column)
+
         name_renderer = Gtk.CellRendererText()
         name_column = Gtk.TreeViewColumn ("File", name_renderer, text = 0)
         self.append_column (name_column)
 
-        self.tree_store = Gtk.TreeStore (str)
+        self.tree_store = Gtk.TreeStore (str, str)
 
         self.set_model (self.tree_store)
 
@@ -52,7 +57,7 @@ class MarkItDocumentView (Gtk.TreeView):
         for file_obj in self.file_manager.get_file_list ():
             if file_obj.get_is_folder () == False:
                 if file_obj.get_parent_folder () == None:
-                    file_iter = self.tree_store.append (None, [file_obj.get_name ()])
+                    file_iter = self.tree_store.append (None, [file_obj.get_name (), "folder-documents-symbolic"])
                 else:
                     last_index = file_obj.get_parent_folder ().rfind("/")
                     #print (last_index)
@@ -62,7 +67,7 @@ class MarkItDocumentView (Gtk.TreeView):
                         parent_string = file_obj.get_parent_folder ()[last_index + 1:]
 
                     parent_folder_iter = self.folder_iters[parent_string]
-                    file_iter = self.tree_store.append (parent_folder_iter, [file_obj.get_name ()])
+                    file_iter = self.tree_store.append (parent_folder_iter, [file_obj.get_name (), "folder-documents-symbolic"])
 
         self.get_selection ().connect ("changed", self.on_selection_change)
         self.show_all ()
@@ -73,7 +78,7 @@ class MarkItDocumentView (Gtk.TreeView):
         for folder_obj in folder_list:
             # This adds the top level folders
             if folder_obj.get_parent_folder () == None:
-                folder_iter = self.tree_store.append (None, [folder_obj.get_name ()])
+                folder_iter = self.tree_store.append (None, [folder_obj.get_name (), "folder-symbolic"])
                 self.folder_iters[folder_obj.get_name ()] = folder_iter
             else:
                 # These folders have a parent folder
@@ -87,7 +92,7 @@ class MarkItDocumentView (Gtk.TreeView):
                 if self.folder_iters.get (parent_string) != None:
                     # These folders' parents are already in the tree, so we can add them
                     parent_iter = self.folder_iters [parent_string]
-                    folder_iter = self.tree_store.append (parent_iter, [folder_obj.get_name ()])
+                    folder_iter = self.tree_store.append (parent_iter, [folder_obj.get_name (), "folder-symbolic"])
                     self.folder_iters[folder_obj.get_name ()] = folder_iter
                 else:
                     orphan_folders.append (folder_obj)
@@ -142,4 +147,6 @@ class MarkItDocumentView (Gtk.TreeView):
 
         full_path = full_path[:-1]
 
-        self.emit ("file_clicked", full_path)
+        file_obj = self.file_manager.get_file_object_from_path (full_path)
+        if file_obj != None: # If it returns None then it's not a file and we don't care about the rest
+            self.emit ("file_clicked", full_path)

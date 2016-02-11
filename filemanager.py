@@ -74,6 +74,7 @@ class MarkItFileManager (GObject.GObject):
         'file_deleted': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_opened': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_closed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'folder_created': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
     def __init__ (self, open_files):
@@ -184,15 +185,19 @@ class MarkItFileManager (GObject.GObject):
 
     def create_new_folder (self, folder_name):
         # Make new folder
+        # For some reason that probably made sense at the time we create the
+        # folder here, the object does not create it
         try:
             path = self.app_dir + folder_name
             os.makedirs (path)
+
+            folder_obj = MarkItFileObject (folder_name, self.app_dir + folder_name, is_folder = True)
+            self.folder_list.append (folder_obj)
+
+            self.emit ("folder_created", path)
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise
-
-        # Make a new folder object
-        folder_obj = MarkItFileObject (folder_name, self.app_dir + folder_name, is_folder = True)
 
     def get_file_object_from_name (self, name):
         for file_object in self.file_list:
@@ -201,15 +206,16 @@ class MarkItFileManager (GObject.GObject):
 
         return None
 
-    def get_file_object_from_path (self, path):
+    def get_file_object_from_path (self, path, is_folder = False):
 
-        for file_object in self.file_list:
-            if file_object.get_path () == path:
-                return file_object
-
-        for folder_object in self.folder_list:
-            if folder_object.get_path () == path:
-                return folder_object
+        if is_folder != True:
+            for file_object in self.file_list:
+                if file_object.get_path () == path:
+                    return file_object
+        else:
+            for folder_object in self.folder_list:
+                if folder_object.get_path () == path:
+                    return folder_object
 
         return None
 
