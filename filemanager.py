@@ -101,7 +101,14 @@ class MarkItFileManager (GObject.GObject):
                 parent_dir = root[len(self.app_dir):]
                 if root == self.app_dir:
                     parent_dir = None
-                folder_obj = MarkItFileObject (directory, root + "/" + directory,
+
+                if root[-1:] != "/":
+                    file_path = root + "/" + directory
+                else:
+                    file_path = root + directory
+
+
+                folder_obj = MarkItFileObject (directory, file_path,
                                                is_folder = True,
                                                parent_folder = parent_dir)
                 self.folder_list.append (folder_obj)

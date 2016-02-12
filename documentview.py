@@ -8,14 +8,54 @@ import copy
 
 class MarkItDocumentView (Gtk.TreeView):
 
-    TARGETS = [
-        (Gtk.TargetEntry.new ("File Row", Gtk.TargetFlags.SAME_WIDGET, 0)),
-        (Gtk.TargetEntry.new ("Folder Row", Gtk.TargetFlags.SAME_WIDGET, 1))
-    ]
-
     __gsignals__ = {
         'file_clicked': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'file_moved': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
+
+    class MarkItTreeStore (Gtk.TreeStore):
+
+        def __init__ (self, *column_types, tree_view):
+            Gtk.TreeStore.__init__ (self)
+            self.set_column_types (column_types)
+
+            self.parent_tree = tree_view
+
+        def do_row_drop_possible (self, dest_path, selection_data):
+            # So I'm rewriting the original implementation here but adding
+            # some other stuff
+
+            row_data = Gtk.tree_get_row_drag_data (selection_data)
+            is_row = row_data [0]
+            src_model = row_data [1]
+            src_path = row_data [2]
+
+            if is_row == False:
+                return False # Obviously
+
+            if src_model != self.parent_tree.get_model ():
+                return False # We want to only drop into the same treeview
+
+            if src_path.is_ancestor (dest_path):
+                return False # We don't want to drop into the same row
+
+            if dest_path.get_depth () > 1:
+                tmp_path = dest_path.copy ()
+                tmp_path.up ()
+
+                # This bit is new B)
+                parent_obj = self.parent_tree.get_file_from_tree_path (tmp_path, self.parent_tree)
+                if parent_obj.get_is_folder () == False: # So if it is a file
+                    return False
+
+                # If the parent doesn't exist
+                # Idk what's happening I'm just copying the original source code
+                try:
+                    self.parent_tree.get_model ().get_iter (tmp_path)
+                except ValueError:
+                    return False
+
+            return True
 
     def __init__ (self, file_manager):
         Gtk.TreeView.__init__ (self)
@@ -25,15 +65,13 @@ class MarkItDocumentView (Gtk.TreeView):
         self.connect ("row_activated", self.on_row_clicked)
         self.file_manager = file_manager
 
+        self.row_type_file_icon = "folder-documents-symbolic"
+        self.row_type_folder_icon = "folder-symbolic"
+
         self.get_style_context().add_class ("sidebar")
         self.get_style_context().add_class ("view")
 
-        self.enable_model_drag_source (Gdk.ModifierType.BUTTON1_MASK,
-                                       self.TARGETS, Gdk.DragAction.MOVE)
-        self.enable_model_drag_dest (self.TARGETS,
-                                     Gdk.DragAction.MOVE)
-        self.connect("drag_data_get", self.on_drag_data_get)
-        self.connect("drag_data_received", self.on_drag_data_receive)
+        self.set_reorderable (True)
 
         # Make columns - One for file icon and one for file name
 
@@ -45,7 +83,7 @@ class MarkItDocumentView (Gtk.TreeView):
         name_column = Gtk.TreeViewColumn ("File", name_renderer, text = 0)
         self.append_column (name_column)
 
-        self.tree_store = Gtk.TreeStore (str, str)
+        self.tree_store = self.MarkItTreeStore (str, str, tree_view = self)
 
         self.set_model (self.tree_store)
 
@@ -57,7 +95,7 @@ class MarkItDocumentView (Gtk.TreeView):
         for file_obj in self.file_manager.get_file_list ():
             if file_obj.get_is_folder () == False:
                 if file_obj.get_parent_folder () == None:
-                    file_iter = self.tree_store.append (None, [file_obj.get_name (), "folder-documents-symbolic"])
+                    file_iter = self.tree_store.append (None, [file_obj.get_name (), self.row_type_file_icon])
                 else:
                     last_index = file_obj.get_parent_folder ().rfind("/")
                     #print (last_index)
@@ -67,10 +105,11 @@ class MarkItDocumentView (Gtk.TreeView):
                         parent_string = file_obj.get_parent_folder ()[last_index + 1:]
 
                     parent_folder_iter = self.folder_iters[parent_string]
-                    file_iter = self.tree_store.append (parent_folder_iter, [file_obj.get_name (), "folder-documents-symbolic"])
+                    file_iter = self.tree_store.append (parent_folder_iter, [file_obj.get_name (), self.row_type_file_icon])
 
         self.get_selection ().connect ("changed", self.on_selection_change)
         self.show_all ()
+
 
     def add_folders (self, folder_list, call_number):
         orphan_folders = list ()
@@ -78,7 +117,7 @@ class MarkItDocumentView (Gtk.TreeView):
         for folder_obj in folder_list:
             # This adds the top level folders
             if folder_obj.get_parent_folder () == None:
-                folder_iter = self.tree_store.append (None, [folder_obj.get_name (), "folder-symbolic"])
+                folder_iter = self.tree_store.append (None, [folder_obj.get_name (), self.row_type_folder_icon])
                 self.folder_iters[folder_obj.get_name ()] = folder_iter
             else:
                 # These folders have a parent folder
@@ -92,7 +131,7 @@ class MarkItDocumentView (Gtk.TreeView):
                 if self.folder_iters.get (parent_string) != None:
                     # These folders' parents are already in the tree, so we can add them
                     parent_iter = self.folder_iters [parent_string]
-                    folder_iter = self.tree_store.append (parent_iter, [folder_obj.get_name (), "folder-symbolic"])
+                    folder_iter = self.tree_store.append (parent_iter, [folder_obj.get_name (), self.row_type_folder_icon])
                     self.folder_iters[folder_obj.get_name ()] = folder_iter
                 else:
                     orphan_folders.append (folder_obj)
@@ -106,7 +145,12 @@ class MarkItDocumentView (Gtk.TreeView):
 
     def add_row (self, file_obj):
         if file_obj.get_parent_folder () == None:
-            self.tree_store.append (None, [file_obj.get_name ()])
+            if file_obj.get_is_folder () == True:
+                icon = self.row_type_folder_icon
+            else:
+                icon = self.row_type_file_icon
+
+            self.tree_store.append (None, [file_obj.get_name (), icon])
 
     def get_path_for_folder (self, folder_obj):
         pass
@@ -115,31 +159,29 @@ class MarkItDocumentView (Gtk.TreeView):
         store, paths = selection.get_selected_rows ()
         # Idk
 
-
-    def on_drag_data_get (self, treeview, context, selection_data, target_id, time):
-        pass
-
-    def on_drag_data_receive (self, treeview, context, x, y, selection_data, target_id, time):
-        pass
-
     def on_row_clicked (self, tree, path, column):
 
         (model, pathlist) = self.get_selection ().get_selected_rows()
 
-        for path in pathlist:
-            directory_list = list ()
+        file_obj = self.get_file_from_tree_path (pathlist[0], tree)
+        if file_obj.get_is_folder () == False: # We only want to open up files
+            self.emit ("file_clicked", file_obj.get_path ())
 
-            node_end = False
+    def get_file_from_tree_path (self, tree_path, tree):
 
-            while node_end == False:
-                tree_iter = tree.get_model ().get_iter (path)
-                value = model.get_value(tree_iter, 0)
-                directory_list.append (value)
-                if path.get_depth () > 1:
-                    path.up ()
-                else:
-                    node_end = True
+        directory_list = list ()
 
+        node_end = False
+
+        while node_end == False:
+            tree_iter = tree.get_model ().get_iter (tree_path)
+            value = tree.get_model ().get_value(tree_iter, 0)
+            file_type = tree.get_model ().get_value(tree_iter, 1)
+            directory_list.append (value)
+            if tree_path.get_depth () > 1:
+                tree_path.up ()
+            else:
+                node_end = True
 
         full_path = self.file_manager.get_app_dir ()
         for name in list(reversed(directory_list)):
@@ -147,6 +189,11 @@ class MarkItDocumentView (Gtk.TreeView):
 
         full_path = full_path[:-1]
 
-        file_obj = self.file_manager.get_file_object_from_path (full_path)
-        if file_obj != None: # If it returns None then it's not a file and we don't care about the rest
-            self.emit ("file_clicked", full_path)
+        if file_type == self.row_type_folder_icon:
+            file_obj = self.file_manager.get_file_object_from_path (full_path, is_folder = True)
+        elif file_type == self.row_type_file_icon:
+            file_obj = self.file_manager.get_file_object_from_path (full_path, is_folder = False)
+        else:
+            file_obj = None
+
+        return file_obj
