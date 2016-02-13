@@ -18,6 +18,7 @@ class MarkItStack (Gtk.Notebook):
 
         self.file_manager = files
         self.file_manager.connect ('file_opened', self.on_file_open)
+        self.file_manager.connect ('file_moved', self.on_file_moved)
 
         self.populate ()
 
@@ -50,10 +51,20 @@ class MarkItStack (Gtk.Notebook):
     def on_file_open (self, *args):
         self.add_page (args[1])
 
+    def on_file_moved (self, *args):
+        src_path = args[1]
+        dest_path = args[2]
+
+        tab_num = self.get_page_number_for_path (src_path)
+        label = Gtk.Label (dest_path)
+        page = self.get_nth_page (tab_num)
+        page.get_children ()[0].source_file_path = dest_path
+        self.set_tab_label (self.get_nth_page (tab_num), label)
+
     def get_page_number_for_path (self, path):
         for tab_num in range (0, self.get_n_pages()):
             page = self.get_nth_page (tab_num)
-            if page.get_children ()[0].get_file_path () == path:
+            if self.get_tab_label_text (page) == path:
                 return tab_num
 
         return None

@@ -34,12 +34,11 @@ class MarkItWorkspaceView (Gtk.ListBox):
 
         self.initial_visible_widget = None
 
-        self.mouse_hovering_on_label = False
-        self.mouse_hovering_on_button = False
-
         self.populate ()
         self.connect ('row_activated', self.on_row_clicked)
         self.connect ('selected_rows_changed', self.on_selection_change)
+
+        self.file_manager.connect ('file_moved', self.on_file_move)
 
     def on_row_clicked (self, listbox, row):
         self.emit ('file_clicked', row.get_path ())
@@ -128,6 +127,11 @@ class MarkItWorkspaceView (Gtk.ListBox):
         else:
             self.emit ("file_close_requested", row_path, None)
 
+    def on_file_move (self, *args):
+        src_path = args[1]
+        dest_path = args[2]
+
+        self.get_row_for_path (src_path).set_path (dest_path)
 
     def get_row_for_path (self, path):
         for row in self.get_children ():

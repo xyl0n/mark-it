@@ -6,6 +6,8 @@ import errno
 from gi.repository import GObject
 
 import threading
+import shutil
+from enum import IntEnum
 
 class MarkItFileObject (GObject.GObject):
 
@@ -53,6 +55,9 @@ class MarkItFileObject (GObject.GObject):
     def get_path (self):
         return self.path
 
+    def set_path (self, path):
+        self.path = path
+
     def get_is_open (self):
         return self.is_open
 
@@ -75,7 +80,11 @@ class MarkItFileManager (GObject.GObject):
         'file_opened': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_closed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'folder_created': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'folder_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
+        'file_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
     }
+
+    FileTypes = IntEnum ('FileTypes', 'FILE FOLDER')
 
     def __init__ (self, open_files):
         # If this is the first run, we won't have a directory, so lets try to
@@ -206,6 +215,22 @@ class MarkItFileManager (GObject.GObject):
             if exception.errno != errno.EEXIST:
                 raise
 
+    def move_folder (self, old_path, new_path):
+        shutil.move(old_path, new_path)
+
+        folder_obj = self.get_file_object_from_path (old_path, is_folder = True)
+        folder_obj.set_path (new_path)
+
+        self.emit ("folder_moved", old_path, new_path)
+
+    def move_file (self, old_path, new_path):
+        shutil.move(old_path, new_path)
+
+        folder_obj = self.get_file_object_from_path (old_path, is_folder = False)
+        folder_obj.set_path (new_path)
+
+        self.emit ("file_moved", old_path, new_path)
+
     def get_file_object_from_name (self, name):
         for file_object in self.file_list:
             if file_object.get_name () == name:
@@ -214,7 +239,6 @@ class MarkItFileManager (GObject.GObject):
         return None
 
     def get_file_object_from_path (self, path, is_folder = False):
-
         if is_folder != True:
             for file_object in self.file_list:
                 if file_object.get_path () == path:

@@ -62,6 +62,7 @@ class MarkItSidebar (Gtk.Box):
         self.pack_end (self.document_view, True, True, 0)
 
         self.document_view.connect ("file_clicked", self.on_document_file_clicked)
+        self.document_view.connect ("file_move_requested", self.on_document_move_request)
 
     def on_file_creation (self, *args):
         # Insert a new entry on document browser
@@ -88,12 +89,19 @@ class MarkItSidebar (Gtk.Box):
 
     def on_document_file_clicked (self, *args):
         file_obj = self.file_manager.get_file_object_from_path (args[1])
+
         if file_obj.get_is_open () != True:
             self.file_manager.open_file (args[1])
 
         row = self.workspace_view.get_row_for_path (args[1])
         if row != None:
             self.workspace_view.select_row (row)
+
+    def on_document_move_request (self, *args):
+        if args[3] == self.file_manager.FileTypes.FILE:
+            self.file_manager.move_file (args[1], args[2])
+        elif args[3] == self.file_manager.FileTypes.FOLDER:
+            self.file_manager.move_folder (args[1], args[2])
 
     def on_workspace_file_closed (self, *args):
         # But first we need to close the pages
