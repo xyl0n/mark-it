@@ -66,7 +66,7 @@ class MarkItWindow(Gtk.Window):
         # Make the titlebar
         # This is for document specific actions
         self.right_header = Gtk.HeaderBar ()
-        self.right_header.set_title ("Untitled 1") # TODO: Replace this with the loaded file
+        self.right_header.set_title ("Mark It") # TODO: Replace this with the loaded file
         self.right_header.set_show_close_button (True)
         self.right_header.get_style_context().add_class("titlebar")
         self.right_header.get_style_context().add_class("markit-right-header")

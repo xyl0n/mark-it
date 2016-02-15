@@ -231,6 +231,19 @@ class MarkItFileManager (GObject.GObject):
 
         self.emit ("file_moved", old_path, new_path)
 
+    def rename_file (self, file_path, new_name):
+        # FIXME: We need to do checks whether the file already exists, if it's a
+        # directory etc.
+        file_obj = self.get_file_object_from_path (file_path)
+        index_without_name = file_obj.get_path().rfind (file_obj.get_name())
+        new_file_path = file_obj.get_path()[:index_without_name] + new_name
+        file_obj.set_path (new_file_path)
+        file_obj.set_name (new_name)
+
+        os.rename (file_path, new_file_path)
+
+        self.emit ("file_moved", file_path, new_file_path)
+
     def get_file_object_from_name (self, name):
         for file_object in self.file_list:
             if file_object.get_name () == name:

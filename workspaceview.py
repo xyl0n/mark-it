@@ -3,6 +3,7 @@
 from gi.repository import Gtk, GLib, GObject, GdkPixbuf, Gio, Pango, GtkSource, Gdk
 
 from filemanager import MarkItFileObject
+from entrylabel import MarkItEntryLabel
 
 class MarkItWorkspaceView (Gtk.ListBox):
 
@@ -22,6 +23,7 @@ class MarkItWorkspaceView (Gtk.ListBox):
     __gsignals__ = {
         'file_clicked': (GObject.SIGNAL_RUN_FIRST, None, (str,)), # We use paths to identify files
         'file_close_requested': (GObject.SIGNAL_RUN_FIRST, None, (str, str,)),
+        'file_rename_requested': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
     }
 
     def __init__ (self, file_manager):
@@ -33,6 +35,15 @@ class MarkItWorkspaceView (Gtk.ListBox):
         self.file_labels = list ()
 
         self.initial_visible_widget = None
+
+        self.file_menu = Gtk.Menu ()
+        self.menu_items = ['Rename', 'Duplicate', 'Close']
+        for item in self.menu_items:
+            print (item)
+            menuitem = Gtk.MenuItem.new_with_label (item)
+            menuitem.connect ("activate", self.on_menu_item_clicked)
+            self.file_menu.append (menuitem)
+            self.file_menu.show_all ()
 
         self.populate ()
         self.connect ('row_activated', self.on_row_clicked)
@@ -50,6 +61,22 @@ class MarkItWorkspaceView (Gtk.ListBox):
                 widget.hide ()
             else:
                 widget.show ()
+
+    def on_menu_item_clicked (self, menuitem):
+
+        if menuitem.get_label () == self.menu_items[0]:
+            row = self.file_menu.get_attach_widget ()
+            event_box = row.get_children ()[0].get_children ()[0]
+            entry_label = event_box.get_children ()[0]
+            entry_label.show_entry ()
+
+    def on_row_entry_changed (self, entry, icon_pos, event):
+        entry_label = entry.get_parent ()
+        if entry.get_text () != entry_label.get_label ().get_text ():
+            entry_label.set_text (entry.get_text ())
+            self.emit ("file_rename_requested", self.file_menu.get_attach_widget ().get_path (), entry.get_text ())
+
+        entry_label.hide ()
 
     def on_selection_change (self, listbox):
 
@@ -74,11 +101,16 @@ class MarkItWorkspaceView (Gtk.ListBox):
         self.show_all ()
 
     def add_row (self, file_object):
-        file_label = Gtk.Label (file_object.get_name ())
-        file_label.set_alignment (0.0, 0.5)
+        file_label = MarkItEntryLabel (file_object.get_name ())
+        file_label.get_label ().set_alignment (0.0, 0.5)
         file_label.set_margin_left (16)
         file_label.get_style_context ().add_class ('markit-sidebar-row')
-        self.file_labels.append (file_label)
+        file_label.get_entry().connect ("icon_press", self.on_row_entry_changed)
+
+        self.hidden_widgets.append (file_label)
+
+        events = Gtk.EventBox ()
+        events.add (file_label)
 
         #row_box = Gtk.Box.new (Gtk.Orientation.HORIZONTAL, 0)
         row_box = Gtk.Grid ()
@@ -92,9 +124,11 @@ class MarkItWorkspaceView (Gtk.ListBox):
         file_label.set_hexpand (True)
 
         row_box.attach (close_button, 1, 0, 1, 1)
-        row_box.attach (file_label, 0, 0, 1, 1)
+        row_box.attach (events, 0, 0, 1, 1)
 
         row = self.MarkItListRow ()
+        row.connect ("button_press_event", self.on_mouse_click)
+
         row.add (row_box)
         self.insert (row, -1)
         row_num = row.get_index ()
@@ -126,6 +160,19 @@ class MarkItWorkspaceView (Gtk.ListBox):
             self.emit ("file_close_requested", row_path, next_row.get_path ())
         else:
             self.emit ("file_close_requested", row_path, None)
+
+    def on_mouse_click (self, widget, event):
+        if event.button == Gdk.BUTTON_SECONDARY:
+            if self.file_menu.get_attach_widget () != widget:
+                if self.file_menu.get_attach_widget () != None:
+                    self.file_menu.detach ()
+                self.file_menu.attach_to_widget (widget, None)
+
+            self.file_menu.popup (None, None, None, None, 0, Gtk.get_current_event_time())
+        elif event.button == Gdk.BUTTON_PRIMARY:
+            self.select_row (widget)
+
+        return True
 
     def on_file_move (self, *args):
         src_path = args[1]

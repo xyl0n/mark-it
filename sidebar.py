@@ -49,6 +49,7 @@ class MarkItSidebar (Gtk.Box):
 
         self.workspace_view.connect ('file_clicked', self.on_workspace_file_clicked)
         self.workspace_view.connect ('file_close_requested', self.on_workspace_file_closed)
+        self.workspace_view.connect ('file_rename_requested', self.on_workspace_file_renamed)
 
     def setup_document_view (self):
         doc_label = Gtk.Label ("<b>Documents</b>")
@@ -86,6 +87,9 @@ class MarkItSidebar (Gtk.Box):
         name = self.file_manager.path_to_name (args[1])
         self.emit ('active_file_changed', name)
         self.document_view.get_selection ().unselect_all ()
+
+    def on_workspace_file_renamed (self, *args):
+        self.file_manager.rename_file (args[1], args[2])
 
     def on_document_file_clicked (self, *args):
         file_obj = self.file_manager.get_file_object_from_path (args[1])
