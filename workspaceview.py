@@ -178,7 +178,9 @@ class MarkItWorkspaceView (Gtk.ListBox):
         src_path = args[1]
         dest_path = args[2]
 
-        self.get_row_for_path (src_path).set_path (dest_path)
+        row = self.get_row_for_path (src_path)
+        if row != None:
+            row.set_path (dest_path)
 
     def get_row_for_path (self, path):
         for row in self.get_children ():

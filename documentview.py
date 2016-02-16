@@ -104,6 +104,7 @@ class MarkItDocumentView (Gtk.TreeView):
         self.get_selection ().set_mode (Gtk.SelectionMode.SINGLE)
         self.connect ("row_activated", self.on_row_clicked)
         self.file_manager = file_manager
+        self.file_manager.connect ("file_renamed", self.on_file_rename)
 
         self.file_type_icons = dict ()
         self.file_type_icons[self.file_manager.FileTypes.FILE] = "folder-documents-symbolic"
@@ -198,6 +199,30 @@ class MarkItDocumentView (Gtk.TreeView):
 
     def on_selection_change (self, selection):
         pass
+
+    def on_file_rename (self, *args):
+        old_path = args[1]
+        old_name = args[2]
+        new_name = args[3]
+
+        self.get_model ().foreach (self.row_iterate_func, args)
+
+    def row_iterate_func (self, model, path, iter, args):
+        old_path = args[1]
+        old_name = args[2]
+        new_name = args[3]
+
+        name = model.get_value (iter, 0)
+        file_type = model.get_value (iter, 1)
+
+        file_path = self.create_file_path_from_tree_path (path, name)
+        if file_path == old_path:
+            if file_type == self.file_type_icons[self.file_manager.FileTypes.FILE]:
+                model.set_value (iter, 0, new_name)
+                return True
+
+        return False
+
 
     def on_row_clicked (self, tree, path, column):
 

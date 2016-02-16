@@ -56,10 +56,11 @@ class MarkItStack (Gtk.Notebook):
         dest_path = args[2]
 
         tab_num = self.get_page_number_for_path (src_path)
-        label = Gtk.Label (dest_path)
-        page = self.get_nth_page (tab_num)
-        page.get_children ()[0].source_file_path = dest_path
-        self.set_tab_label (self.get_nth_page (tab_num), label)
+        if tab_num != None:
+            label = Gtk.Label (dest_path)
+            page = self.get_nth_page (tab_num)
+            page.get_children ()[0].source_file_path = dest_path
+            self.set_tab_label (self.get_nth_page (tab_num), label)
 
     def get_page_number_for_path (self, path):
         for tab_num in range (0, self.get_n_pages()):

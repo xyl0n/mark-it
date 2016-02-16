@@ -79,8 +79,10 @@ class MarkItFileManager (GObject.GObject):
         'file_deleted': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_opened': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_closed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'file_renamed': (GObject.SIGNAL_RUN_FIRST, None, (str, str, str)),
         'folder_created': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'folder_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
+        'folder_renamed': (GObject.SIGNAL_RUN_FIRST, None, (str, str, str)),
         'file_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
     }
 
@@ -237,12 +239,14 @@ class MarkItFileManager (GObject.GObject):
         file_obj = self.get_file_object_from_path (file_path)
         index_without_name = file_obj.get_path().rfind (file_obj.get_name())
         new_file_path = file_obj.get_path()[:index_without_name] + new_name
+        old_name = file_obj.get_name ()
         file_obj.set_path (new_file_path)
         file_obj.set_name (new_name)
 
         os.rename (file_path, new_file_path)
 
         self.emit ("file_moved", file_path, new_file_path)
+        self.emit ("file_renamed", file_path, old_name, new_name)
 
     def get_file_object_from_name (self, name):
         for file_object in self.file_list:
