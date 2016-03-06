@@ -9,7 +9,7 @@ import threading
 import shutil
 from enum import IntEnum
 
-class MarkItFileObject (GObject.GObject):
+class MarkItFileObject:
 
     # This class carries information about a file or a folder
 
@@ -79,11 +79,11 @@ class MarkItFileManager (GObject.GObject):
         'file_deleted': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_opened': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'file_closed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'file_renamed': (GObject.SIGNAL_RUN_FIRST, None, (str, str, str)),
+        'file_renamed': (GObject.SIGNAL_RUN_FIRST, None, (str, str, str,)),
         'folder_created': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'folder_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
-        'folder_renamed': (GObject.SIGNAL_RUN_FIRST, None, (str, str, str)),
-        'file_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
+        'folder_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str,)),
+        'folder_renamed': (GObject.SIGNAL_RUN_FIRST, None, (str, str, str,)),
+        'file_moved': (GObject.SIGNAL_RUN_FIRST, None, (str, str,)),
     }
 
     FileTypes = IntEnum ('FileTypes', 'FILE FOLDER')
@@ -274,9 +274,12 @@ class MarkItFileManager (GObject.GObject):
 
         return 0
 
-    def path_to_name (self, path):
-        file_obj = self.get_file_object_from_path (path)
-        return file_obj.get_name ()
+    def path_to_name (self, path, is_folder = False):
+        file_obj = self.get_file_object_from_path (path, is_folder = is_folder)
+        if file_obj != None:
+            return file_obj.get_name ()
+
+        return None
 
     def sort_file_list (self, file_list):
         name_list = list ()

@@ -11,7 +11,7 @@ class MarkItDocumentView (Gtk.TreeView):
 
     __gsignals__ = {
         'file_clicked': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'file_move_requested': (GObject.SIGNAL_RUN_FIRST, None, (str, str, int)),
+        'file_move_requested': (GObject.SIGNAL_RUN_FIRST, None, (str, str, int,)),
     }
 
     class MarkItTreeStore (Gtk.TreeStore):
@@ -19,7 +19,7 @@ class MarkItDocumentView (Gtk.TreeView):
         __gsignals__ = {
             # We want to emit this if a row is dropped into a new folder
             # 1st arg is source path, 2nd is dest arg, 3rd is file type
-            'row_hierarchy_changed' : (GObject.SIGNAL_RUN_FIRST, None, (str, str, int)),
+            'row_hierarchy_changed' : (GObject.SIGNAL_RUN_FIRST, None, (str, str, int,)),
         }
 
         def __init__ (self, *column_types, tree_view):
@@ -77,7 +77,8 @@ class MarkItDocumentView (Gtk.TreeView):
                     return False
 
                 # If the parent doesn't exist
-                # Idk what's happening here I'm just copying the original source code
+                # Idk what's happening here I'm just
+                # copying the original source code
                 try:
                     self.parent_tree.get_model ().get_iter (tmp_path)
                 except ValueError:

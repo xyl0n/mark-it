@@ -6,20 +6,27 @@ from textview import MarkItTextView
 from sidebar import MarkItSidebar
 from filemanager import MarkItFileManager
 from stack import MarkItStack
+from dialogmanager import MarkItDialogManager
 
 import threading
 
-class MarkItWindow(Gtk.Window):
+class MarkItWindow (Gtk.Window):
 
     def __init__ (self):
         Gtk.Window.__init__(self)
         self.set_title ("Mark It")
         self.set_default_size (1200, 800)
+        self.set_icon_name ("accessories-text-editor")
         self.connect ("delete-event", self.on_close)
 
         self.load_settings ()
 
         self.file_manager = MarkItFileManager (self.opened_files)
+
+        self.dialog_manager = MarkItDialogManager (self)
+
+        self.dialog_manager.connect ('name_dialog_response', self.on_name_dialog_responded)
+        self.dialog_manager.connect ('name_dialog_canceled', self.on_name_dialog_cancel)
 
         style = Gtk.CssProvider ()
         style.load_from_path ("style.css")
@@ -51,7 +58,7 @@ class MarkItWindow(Gtk.Window):
         self.stack = MarkItStack (self.file_manager)
         self.stack.show_all ()
 
-        self.sidebar = MarkItSidebar (self.file_manager, self.stack)
+        self.sidebar = MarkItSidebar (self.file_manager, self.stack, self.dialog_manager)
         self.sidebar.connect ("active_file_changed", self.on_active_file_changed)
         self.paned.add1 (self.sidebar)
         self.document_nav_header.set_size_request (self.sidebar.get_size_request()[0], -1)
@@ -122,7 +129,6 @@ class MarkItWindow(Gtk.Window):
 
         return self.header_box
 
-
     # Wrapper function
     def create_new_file (self, *args):
         self.file_manager.create_new_file ()
@@ -130,36 +136,14 @@ class MarkItWindow(Gtk.Window):
     def create_new_folder (self, *args):
         # We want to add a new row to the document viewer, except make it a folder
         # Lets make a dialog to get the name of the folder
-        name_dialog = Gtk.Dialog ()
-        dialog_content = name_dialog.get_content_area ()
+        self.dialog_manager.create_name_dialog ("Create New Folder", "Create", "Untitled Folder", 1)
 
-        name_entry = Gtk.Entry ()
-        default_name = "Untitled Folder " + str(self.file_manager.folder_count + 1)
-        name_entry.set_text (default_name)
-        name_entry.set_margin_left (12)
-        name_entry.set_margin_right (12)
-        name_entry.set_margin_top (12)
-        name_entry.set_margin_bottom (12)
-        dialog_content.add (name_entry)
+    def on_name_dialog_responded (self, *args):
+        self.file_manager.create_new_folder (args[1])
+        self.dialog_manager.destroy_dialog (args[2])
 
-        name_dialog.add_button ("Cancel", 0)
-        name_dialog.add_button ("Create", 1)
-
-        name_dialog.set_modal (True)
-        name_dialog.set_transient_for (self)
-
-        name_dialog.set_title ("Create New Folder")
-
-        name_dialog.show_all ()
-        name_dialog.connect ("response", self.on_folder_dialog_response)
-        name_dialog.run ()
-
-    def on_folder_dialog_response (self, dialog, id):
-        if id == 1:
-            name = dialog.get_content_area ().get_children ()[0].get_text ()
-            self.file_manager.create_new_folder (name)
-
-        dialog.destroy ()
+    def on_name_dialog_cancel (self, *args):
+        self.dialog_manager.destroy_dialog (args[1])
 
     def on_active_file_changed (self, *args):
         self.right_header.set_title (args[1])

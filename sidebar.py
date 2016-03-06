@@ -13,12 +13,13 @@ class MarkItSidebar (Gtk.Box):
         'active_file_changed': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
-    def __init__ (self, file_manager, view_stack):
+    def __init__ (self, file_manager, view_stack, dialog_manager):
         Gtk.Box.__init__ (self)
 
         self.file_manager = file_manager
         self.document_view = MarkItDocumentView (self.file_manager)
         self.stack = view_stack
+        self.dialog_manager = dialog_manager
         self.set_orientation (Gtk.Orientation.VERTICAL)
         self.set_size_request (200, -1)
         self.get_style_context().add_class ("markit-sidebar")
@@ -29,6 +30,8 @@ class MarkItSidebar (Gtk.Box):
         self.file_manager.connect ("file_created", self.on_file_creation)
         self.file_manager.connect ("file_opened", self.on_file_open)
         self.file_manager.connect ("folder_created", self.on_folder_creation)
+
+        self.dialog_manager.connect ("name_dialog_response", self.on_name_dialog_response)
 
         if len(self.file_manager.get_file_list()) == 0:
             self.file_manager.create_new_file () # TODO: if opened files are also zero
@@ -49,7 +52,7 @@ class MarkItSidebar (Gtk.Box):
 
         self.workspace_view.connect ('file_clicked', self.on_workspace_file_clicked)
         self.workspace_view.connect ('file_close_requested', self.on_workspace_file_closed)
-        self.workspace_view.connect ('file_rename_requested', self.on_workspace_file_renamed)
+        self.workspace_view.connect ('file_rename_requested', self.on_workspace_file_rename_request)
 
     def setup_document_view (self):
         doc_label = Gtk.Label ("<b>Documents</b>")
@@ -88,8 +91,18 @@ class MarkItSidebar (Gtk.Box):
         self.emit ('active_file_changed', name)
         self.document_view.get_selection ().unselect_all ()
 
-    def on_workspace_file_renamed (self, *args):
-        self.file_manager.rename_file (args[1], args[2])
+    def on_workspace_file_rename_request (self, *args):
+        name = self.file_manager.path_to_name (args[1])
+        path = args[1]
+        self.dialog_manager.create_name_dialog ("Rename file", "Rename", name, 2, (path))
+
+    def on_name_dialog_response (self, *args):
+        text = args[1]
+        id = args[2]
+        path = args[3]
+        path = path[0]
+
+        self.file_manager.rename_file (path, text)
 
     def on_document_file_clicked (self, *args):
         file_obj = self.file_manager.get_file_object_from_path (args[1])

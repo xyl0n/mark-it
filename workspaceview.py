@@ -23,7 +23,7 @@ class MarkItWorkspaceView (Gtk.ListBox):
     __gsignals__ = {
         'file_clicked': (GObject.SIGNAL_RUN_FIRST, None, (str,)), # We use paths to identify files
         'file_close_requested': (GObject.SIGNAL_RUN_FIRST, None, (str, str,)),
-        'file_rename_requested': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
+        'file_rename_requested': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
     def __init__ (self, file_manager):
@@ -65,16 +65,13 @@ class MarkItWorkspaceView (Gtk.ListBox):
     def on_menu_item_clicked (self, menuitem):
 
         if menuitem.get_label () == self.menu_items[0]:
-            row = self.file_menu.get_attach_widget ()
-            event_box = row.get_children ()[0].get_children ()[0]
-            entry_label = event_box.get_children ()[0]
-            entry_label.show_entry ()
+            self.emit ("file_rename_requested", self.file_menu.get_attach_widget ().get_path ())
 
     def on_row_entry_changed (self, entry, icon_pos, event):
         entry_label = entry.get_parent ()
         if entry.get_text () != entry_label.get_label ().get_text ():
             entry_label.set_text (entry.get_text ())
-            self.emit ("file_rename_requested", self.file_menu.get_attach_widget ().get_path (), entry.get_text ())
+            #self.emit ("file_rename_requested", self.file_menu.get_attach_widget ().get_path (), entry.get_text ())
 
         entry_label.hide ()
 
