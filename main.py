@@ -7,6 +7,7 @@ from sidebar import MarkItSidebar
 from filemanager import MarkItFileManager
 from stack import MarkItStack
 from dialogmanager import MarkItDialogManager
+from titlebar import MarkItTitleBar
 
 import threading
 
@@ -50,7 +51,10 @@ class MarkItWindow (Gtk.Window):
 
     def create_interface (self):
 
-        self.set_titlebar (self.create_titlebar ())
+        self.titlebar = MarkItTitleBar (self.file_manager)
+        self.titlebar.connect ('file_create_requested', self.on_file_create_request)
+        self.titlebar.connect ('folder_create_requested', self.on_folder_create_request)
+        self.set_titlebar (self.titlebar)
 
         self.box = Gtk.Box ()
         self.paned = Gtk.Paned ()
@@ -61,7 +65,7 @@ class MarkItWindow (Gtk.Window):
         self.sidebar = MarkItSidebar (self.file_manager, self.stack, self.dialog_manager)
         self.sidebar.connect ("active_file_changed", self.on_active_file_changed)
         self.paned.add1 (self.sidebar)
-        self.document_nav_header.set_size_request (self.sidebar.get_size_request()[0], -1)
+        self.titlebar.set_left_header_width (self.sidebar.get_size_request()[0])
         self.sidebar.connect ("size_allocate", self.on_sidebar_size_change)
 
         self.paned.add2 (self.stack)
@@ -69,73 +73,13 @@ class MarkItWindow (Gtk.Window):
 
         self.add (self.box)
 
-    def create_titlebar (self):
-        # Make the titlebar
-        # This is for document specific actions
-        self.right_header = Gtk.HeaderBar ()
-        self.right_header.set_title ("Mark It") # TODO: Replace this with the loaded file
-        self.right_header.set_show_close_button (True)
-        self.right_header.get_style_context().add_class("titlebar")
-        self.right_header.get_style_context().add_class("markit-right-header")
-
-        # This is for the file browser
-        self.document_nav_header = Gtk.HeaderBar ()
-        self.document_nav_header.set_show_close_button (False)
-        self.document_nav_header.get_style_context().add_class("titlebar")
-        self.document_nav_header.get_style_context().add_class("markit-document-header")
-
-        # Make a new file
-        new_file_button = Gtk.Button ().new_from_icon_name ("document-new-symbolic", 1)
-        new_file_button.connect ('clicked', self.create_new_file)
-        self.document_nav_header.pack_start (new_file_button)
-
-        new_folder_button = Gtk.Button ().new_from_icon_name ("folder-new-symbolic", 1)
-        new_folder_button.connect ('clicked', self.create_new_folder)
-        self.document_nav_header.pack_start (new_folder_button)
-
-        # This is for buttons related to file editing
-
-        undo_button = Gtk.Button ().new_from_icon_name ("edit-undo-symbolic", 1)
-        redo_button = Gtk.Button ().new_from_icon_name ("edit-redo-symbolic", 1)
-        self.right_header.pack_start (undo_button)
-        self.right_header.pack_start (redo_button)
-
-        search_button = Gtk.Button ().new_from_icon_name ("edit-find-symbolic", 1)
-        self.right_header.pack_start (search_button)
-
-        export_button = Gtk.Button ().new_from_icon_name ("document-export-symbolic", 1)
-        self.right_header.pack_start (export_button)
-
-        # End
-
-        preferences_button = Gtk.Button ().new_from_icon_name ("view-more-symbolic", 1)
-        self.right_header.pack_end (preferences_button)
-
-        self.right_header.pack_end (Gtk.Separator.new (Gtk.Orientation.VERTICAL))
-
-        delete_button = Gtk.Button ().new_from_icon_name ("user-trash-symbolic", 1)
-        self.right_header.pack_end (delete_button)
-
-        timeline_button = Gtk.Button ().new_from_icon_name ("document-open-recent-symbolic", 1)
-        self.right_header.pack_end (timeline_button)
-
-        upload_button = Gtk.Button ().new_from_icon_name ("send-to-symbolic", 1)
-        self.right_header.pack_end (upload_button)
-
-        self.header_box = Gtk.Box ()
-        self.header_box.pack_start (self.document_nav_header, False, False, 0)
-        self.header_box.pack_start (Gtk.Separator.new (Gtk.Orientation.VERTICAL), False, False, 0)
-        self.header_box.pack_start (self.right_header, True, True, 0)
-
-        return self.header_box
-
-    # Wrapper function
-    def create_new_file (self, *args):
+    def on_file_create_request (self, *args):
         self.file_manager.create_new_file ()
 
-    def create_new_folder (self, *args):
+    def on_folder_create_request (self, *args):
         # We want to add a new row to the document viewer, except make it a folder
         # Lets make a dialog to get the name of the folder
+        # TODO: Replace "Untitled Folder" with something else if it already exists
         self.dialog_manager.create_name_dialog ("Create New Folder", "Create", "Untitled Folder", 1)
 
     def on_name_dialog_responded (self, *args):
@@ -146,10 +90,10 @@ class MarkItWindow (Gtk.Window):
         self.dialog_manager.destroy_dialog (args[1])
 
     def on_active_file_changed (self, *args):
-        self.right_header.set_title (args[1])
+        self.titlebar.set_title (args[1])
 
     def on_sidebar_size_change (self, widget, allocation):
-        self.document_nav_header.set_size_request (allocation.width, -1)
+        self.titlebar.set_left_header_width (allocation.width)
 
     def on_close (self, *args):
         # We don't want to close while some files are still saving

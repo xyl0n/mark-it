@@ -4,6 +4,8 @@ from gi.repository import Gtk, GObject
 
 class MarkItDialogManager (GObject.GObject):
 
+    # The dialog manager makes dialogs 
+
     __gsignals__ = {
         'name_dialog_response': (GObject.SIGNAL_RUN_FIRST, None, (str, int, GObject.TYPE_PYOBJECT,)),
         'name_dialog_canceled': (GObject.SIGNAL_RUN_FIRST, None, (int,)),
@@ -14,7 +16,6 @@ class MarkItDialogManager (GObject.GObject):
         self.window = window
         self.dialog_ids = dict ()
         self.dialog_data = dict ()
-
 
     def on_name_dialog_response (self, dialog, id):
         dialog_id = None

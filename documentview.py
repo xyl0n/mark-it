@@ -6,7 +6,6 @@ import filemanager
 
 import copy
 
-
 class MarkItDocumentView (Gtk.TreeView):
 
     __gsignals__ = {
