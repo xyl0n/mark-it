@@ -114,5 +114,6 @@ class MarkItWindow (Gtk.Window):
 
         Gtk.main_quit ()
 
+
 window = MarkItWindow ()
 Gtk.main ()

@@ -63,14 +63,16 @@ class MarkItSidebar (Gtk.Box):
 
         self.pack_start (doc_label, False, False, 6)
 
-        self.pack_end (self.document_view, True, True, 0)
+        doc_scrolled = Gtk.ScrolledWindow ()
+        doc_scrolled.add (self.document_view)
+        self.pack_end (doc_scrolled, True, True, 0)
 
         self.document_view.connect ("file_clicked", self.on_document_file_clicked)
         self.document_view.connect ("file_move_requested", self.on_document_move_request)
 
     def on_file_creation (self, *args):
         # Insert a new entry on document browser
-        file_obj = self.file_manager.get_file_object_from_name (args[1])
+        file_obj = self.file_manager.get_file_object_from_path (args[1])
         self.document_view.add_row (file_obj)
 
     def on_folder_creation (self, *args):
@@ -100,6 +102,8 @@ class MarkItSidebar (Gtk.Box):
         text = args[1]
         id = args[2]
         path = args[3]
+        print ("\n\n\n")
+        print (args)
         path = path[0]
 
         self.file_manager.rename_file (path, text)

@@ -59,6 +59,8 @@ class MarkItTextView (GtkSource.View):
         # Various variables
         self.heading_lines = list ()
         self.list_lines = list ()
+        self.single_asterisk_tags = list ()
+        self.double_asterisk_tags = list ()
 
         # If we are currently in the process of writing a list
         self.in_list_mode = False
@@ -131,11 +133,11 @@ class MarkItTextView (GtkSource.View):
 
         self.auto_save.restart ()
 
-        self.check_emphasis (buff, "*")
-        self.check_emphasis (buff, "_")
+        self.check_emphasis (buff, "***")
         self.check_emphasis (buff, "**")
         self.check_emphasis (buff, "__")
-        self.check_emphasis (buff, "***")
+        self.check_emphasis (buff, "*")
+        self.check_emphasis (buff, "_")
         self.check_headings (buff)
         self.check_lists (buff)
 
@@ -218,15 +220,65 @@ class MarkItTextView (GtkSource.View):
                 buff.remove_all_tags (asterisk_start, asterisk_end)
                 if emphasis_type == "*":
                     buff.apply_tag (self.italic, asterisk_start, asterisk_end)
+
+                    mark = buff.create_mark (None, asterisk_start, True)
+                    mark.set_visible (True)
+
+                    end_mark = buff.create_mark (None, asterisk_end, True)
+                    end_mark.set_visible (True)
+
+                    self.single_asterisk_tags.append ((mark, end_mark))
+
                 elif emphasis_type == "_":
                     buff.apply_tag (self.italic, asterisk_start, asterisk_end)
+
+                    mark = buff.create_mark (None, asterisk_start, True)
+                    mark.set_visible (True)
+
+                    end_mark = buff.create_mark (None, asterisk_end, True)
+                    end_mark.set_visible (True)
+
                 if emphasis_type == "**":
                     buff.apply_tag (self.bold, asterisk_start, asterisk_end)
+
+                    mark = buff.create_mark (None, asterisk_start, True)
+                    mark.set_visible (True)
+
+                    end_mark = buff.create_mark (None, asterisk_end, True)
+                    end_mark.set_visible (True)
+
+                    # First we need to delete the marks placed by the single asterisk check
+                    for mark_pair in self.single_asterisk_tags:
+                        iter_first = buff.get_iter_at_mark (mark_pair[0])
+                        print (iter_first.get_offset ())
+                        iter_second = buff.get_iter_at_mark (mark_pair[1])
+                        print (iter_second.get_offset ())
+                        print ("ASTERISK START OFFSET: " + str(asterisk_start.get_offset()) )
+                        print ("ASTERISK END OFFSET: " + str(asterisk_end.get_offset()) )
+
+                        print ("\n")
+                        if buff.get_iter_at_mark (mark_pair[0]) == asterisk_start:
+                            print ("MARK HAS BEEN PLACED HERE BEFORE")
+
                 elif emphasis_type == "__":
                     buff.apply_tag (self.bold, asterisk_start, asterisk_end)
+
+                    mark = buff.create_mark (None, asterisk_start, True)
+                    mark.set_visible (True)
+
+                    end_mark = buff.create_mark (None, asterisk_end, True)
+                    end_mark.set_visible (True)
+
                 if emphasis_type == "***":
                     buff.apply_tag (self.bold, asterisk_start, asterisk_end)
                     buff.apply_tag (self.italic, asterisk_start, asterisk_end)
+
+                    mark = buff.create_mark (None, asterisk_start, True)
+                    mark.set_visible (True)
+
+                    end_mark = buff.create_mark (None, asterisk_end, True)
+                    end_mark.set_visible (True)
+
             except IndexError: # Basically, there's a symbol which has no matching pair
                 pass # this is probably a bad thing to do
 

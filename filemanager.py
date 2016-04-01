@@ -8,6 +8,7 @@ from gi.repository import GObject
 import threading
 import shutil
 from enum import IntEnum
+from collections import deque
 
 class MarkItFileObject:
 
@@ -16,6 +17,7 @@ class MarkItFileObject:
     def __init__ (self, name, path, is_folder = False, parent_folder = None):
         self.name = name
         self.parent_folder = parent_folder
+        self.parent_folder_obj = None
         self.is_folder = is_folder
         self.file_obj = None
         self.path = path
@@ -40,12 +42,6 @@ class MarkItFileObject:
     def set_name (self, name):
         self.name = name
 
-    def get_parent_folder (self):
-        return self.parent_folder
-
-    def set_parent_folder (self, parent_folder):
-        self.parent_folder = parent_folder
-
     def get_file_object (self):
         return self.file_obj
 
@@ -60,6 +56,12 @@ class MarkItFileObject:
 
     def get_is_open (self):
         return self.is_open
+
+    def set_parent_folder_obj (self, folder_obj):
+        self.parent_folder_obj = folder_obj
+
+    def get_parent_folder_obj (self):
+        return self.parent_folder_obj
 
     def close (self):
         self.file_obj.close ()
@@ -109,15 +111,14 @@ class MarkItFileManager (GObject.GObject):
         for root, dirs, filenames in os.walk (self.app_dir):
             for directory in dirs:
                 # Add the folder to our list
-                parent_dir = root[len(self.app_dir):]
+                parent_dir = root + "/"
                 if root == self.app_dir:
                     parent_dir = None
 
                 if root[-1:] != "/":
-                    file_path = root + "/" + directory
+                    file_path = root + "/" + directory + "/"
                 else:
-                    file_path = root + directory
-
+                    file_path = root + directory + "/"
 
                 folder_obj = MarkItFileObject (directory, file_path,
                                                is_folder = True,
@@ -131,9 +132,10 @@ class MarkItFileManager (GObject.GObject):
                 else:
                     file_path = root + filename
 
-                parent_dir = root[len(self.app_dir):]
+                parent_dir = root + "/"
                 if root == self.app_dir:
                     parent_dir = None
+
                 file_object = MarkItFileObject (filename, file_path,
                                                 is_folder = False,
                                                 parent_folder = parent_dir)
@@ -148,6 +150,25 @@ class MarkItFileManager (GObject.GObject):
         self.open_files = list ()
         for file_path in open_files:
             self.open_file (file_path)
+
+        for file_obj in self.file_list:
+            index = file_obj.get_path ().rfind ("/")
+            parent_path = file_obj.get_path ()[:index] + "/"
+            if parent_path != self.app_dir:
+                folder_obj = self.get_file_object_from_path (parent_path, is_folder = True)
+                file_obj.set_parent_folder_obj (folder_obj)
+            else:
+                file_obj.set_parent_folder_obj (None)
+
+        for folder_obj in self.folder_list:
+            index = folder_obj.get_path ().rfind ("/")
+            index = folder_obj.get_path ()[:index].rfind ("/")
+            parent_path = folder_obj.get_path ()[:index] + "/"
+            if parent_path != self.app_dir:
+                parent_folder_obj = self.get_file_object_from_path (parent_path, is_folder = True)
+                folder_obj.set_parent_folder_obj (parent_folder_obj)
+            else:
+                folder_obj.set_parent_folder_obj (None)
 
     def get_file_list (self):
         return self.file_list
@@ -197,7 +218,7 @@ class MarkItFileManager (GObject.GObject):
             self.file_list.append (file_object)
             self.file_list = self.sort_file_list (self.file_list)
             self.open_file (file_path)
-            self.emit ("file_created", filename)
+            self.emit ("file_created", file_path)
         except IOError as error:
             raise
 
@@ -218,11 +239,58 @@ class MarkItFileManager (GObject.GObject):
                 raise
 
     def move_folder (self, old_path, new_path):
+
         shutil.move(old_path, new_path)
-
         folder_obj = self.get_file_object_from_path (old_path, is_folder = True)
-        folder_obj.set_path (new_path)
 
+        old_folder_paths = {}
+
+        for child_folder in self.folder_list:
+            if child_folder.get_path () != old_path: # So if its not the same folder
+                levels = self.folder_is_ancestor (folder_obj, child_folder)
+                if levels != 0:
+                    child = child_folder
+                    hierarchy = deque ()
+                    for i in range (0, levels):
+                        hierarchy.appendleft (child.get_name ())
+                        parent = child_folder.get_parent_folder_obj ()
+                        if parent.get_path () != old_path:
+                            child = parent
+
+                    child_path = new_path
+                    for item in hierarchy:
+                        child_path += "/"
+                        child_path += item
+
+                    child_path += "/"
+                    old_folder_paths[child_folder.get_path ()] = child_folder
+                    child_folder.set_path (child_path)
+
+        for file_obj in self.file_list:
+            # Change the path for files which are a descendant of the folder
+            levels = self.folder_is_ancestor (folder_obj, file_obj)
+            if levels != 0:
+                child = file_obj
+                hierarchy = deque ()
+                for i in range (0, levels):
+                    hierarchy.appendleft (child.get_name ())
+                    parent = file_obj.get_parent_folder_obj ()
+                    if parent.get_path () != old_path:
+                        child = parent
+
+                child_path = new_path
+                for item in hierarchy:
+                    child_path += "/"
+                    child_path += item
+
+                file_obj.set_path (child_path)
+                '''
+                for old_path in old_folder_paths:
+                    if file_obj.get_parent_folder_obj ().get_path () == old_path:
+                        pass
+                '''
+
+        folder_obj.set_path (new_path)
         self.emit ("folder_moved", old_path, new_path)
 
     def move_file (self, old_path, new_path):
@@ -248,16 +316,10 @@ class MarkItFileManager (GObject.GObject):
         self.emit ("file_moved", file_path, new_file_path)
         self.emit ("file_renamed", file_path, old_name, new_name)
 
-    def get_file_object_from_name (self, name):
-        for file_object in self.file_list:
-            if file_object.get_name () == name:
-                return file_object
-
-        return None
-
     def get_file_object_from_path (self, path, is_folder = False):
         if is_folder != True:
             for file_object in self.file_list:
+                print ("From get_file_object_from_path, file path is " + file_object.get_path ())
                 if file_object.get_path () == path:
                     return file_object
         else:
@@ -273,6 +335,21 @@ class MarkItFileManager (GObject.GObject):
                 return index
 
         return 0
+
+    def get_children_of_folder (self, folder_obj):
+        # Gets the direct children of a folder
+        children = list ()
+        for file_obj in self.file_list:
+            levels = self.folder_is_ancestor (folder_obj, file_obj)
+            if levels == 1:
+                children.append (file_obj)
+
+        for child_folder_obj in self.folder_list:
+            levels = self.folder_is_ancestor (folder_obj, child_folder_obj)
+            if levels == 1:
+                children.append (child_folder_obj)
+
+        return children
 
     def path_to_name (self, path, is_folder = False):
         file_obj = self.get_file_object_from_path (path, is_folder = is_folder)
@@ -297,3 +374,23 @@ class MarkItFileManager (GObject.GObject):
                     sorted_list.insert (name_list.index (name), file_object)
 
         return sorted_list
+
+    def folder_is_ancestor (self, ancestor_folder_obj, child):
+        # Child may be a folder or a file
+        # Recursively get the parent of the file until the parent is the root directory
+
+        levels = 0
+
+        parent_is_root = False
+        while parent_is_root == False:
+            parent = child.get_parent_folder_obj ()
+            if parent == None:
+                parent_is_root = True
+            else:
+                levels += 1
+                if parent.get_path () == ancestor_folder_obj.get_path ():
+                    return levels # Return how deeply descended the file is
+
+                child = parent
+
+        return 0
