@@ -151,6 +151,7 @@ class MarkItFileManager (GObject.GObject):
         for file_path in open_files:
             self.open_file (file_path)
 
+        # Find and set parent folders for each file
         for file_obj in self.file_list:
             index = file_obj.get_path ().rfind ("/")
             parent_path = file_obj.get_path ()[:index] + "/"
@@ -238,6 +239,7 @@ class MarkItFileManager (GObject.GObject):
             if exception.errno != errno.EEXIST:
                 raise
 
+    '''
     def move_folder (self, old_path, new_path):
 
         shutil.move(old_path, new_path)
@@ -245,59 +247,114 @@ class MarkItFileManager (GObject.GObject):
 
         old_folder_paths = {}
 
+        # Lets change the paths of the folders
         for child_folder in self.folder_list:
+            #print ("Analysing folder " + child_folder.get_path ())
             if child_folder.get_path () != old_path: # So if its not the same folder
+                # If the folder is a child of the moved folder
                 levels = self.folder_is_ancestor (folder_obj, child_folder)
-                if levels != 0:
+                if levels > 0:
                     child = child_folder
                     hierarchy = deque ()
                     for i in range (0, levels):
                         hierarchy.appendleft (child.get_name ())
                         parent = child_folder.get_parent_folder_obj ()
+                        print ("PARENT OF CHILD FOLDER IS: ")
+                        print (parent)
+                        print ("\n")
+                        # Is this redundant? We only do the loop until we reach the original folder anyway
                         if parent.get_path () != old_path:
                             child = parent
 
                     child_path = new_path
                     for item in hierarchy:
-                        child_path += "/"
+                        if child_path.endswith ("/") == False:
+                            child_path += "/"
+
                         child_path += item
 
                     child_path += "/"
-                    old_folder_paths[child_folder.get_path ()] = child_folder
+                    #print ("Setting path of folder " + child_folder.get_name () +
+                    #       " to " + child_path)
                     child_folder.set_path (child_path)
 
+
         for file_obj in self.file_list:
-            # Change the path for files which are a descendant of the folder
+            # Change the path for files which are a descendant of the folder)
             levels = self.folder_is_ancestor (folder_obj, file_obj)
-            if levels != 0:
+
+            if levels > 0: # So if the file is somewhere in the folder tree
                 child = file_obj
                 hierarchy = deque ()
+
                 for i in range (0, levels):
+                    # We add the current file or folder's name to a list
                     hierarchy.appendleft (child.get_name ())
                     parent = file_obj.get_parent_folder_obj ()
+                    # And if the parent of the file/folder is not the original folder
+                    # then we do it again with the parent
                     if parent.get_path () != old_path:
                         child = parent
 
                 child_path = new_path
                 for item in hierarchy:
-                    child_path += "/"
+                    if child_path.endswith ("/") == False:
+                        child_path += "/"
                     child_path += item
 
+                print ("Setting path of file " + file_obj.get_name () +
+                       " to " + child_path)
+
                 file_obj.set_path (child_path)
-                '''
-                for old_path in old_folder_paths:
-                    if file_obj.get_parent_folder_obj ().get_path () == old_path:
-                        pass
-                '''
 
         folder_obj.set_path (new_path)
+
+        for obj in self.file_list + self.folder_list:
+            if self.folder_is_ancestor (folder_obj, obj) > 0: # So if it is an ancestor
+                index = obj.get_path ().rfind (obj.get_name ())
+                parent_path = obj.get_path ()[:index]
+                obj.set_parent_folder_obj (self.get_file_object_from_path (parent_path, is_folder = True))
+
+        self.emit ("folder_moved", old_path, new_path)
+    '''
+
+    # Screw it I'm starting again
+    def move_folder (self, folder_obj, new_path):
+        # Lets change the folder's path
+        old_path = folder_obj.get_path ()
+        folder_obj.set_path (new_path)
+        shutil.move(old_path, new_path) # Simple enough
+
+        # We need to find all the folders/files which are in the tree of this folder
+        # and change their paths
+        for obj in self.folder_list + self.file_list:
+            if old_path in obj.get_path ():
+                old_child_path = obj.get_path ()
+                new_child_path = new_path + obj.get_path ()[len(old_path):]
+                obj.set_path (new_child_path)
+
+                if not obj.get_is_folder (): # If it's a file
+                    self.emit ("file_moved", old_child_path, new_child_path)
+
+        # And also change their parents
+        for obj in self.folder_list + self.file_list:
+            if new_path in obj.get_path ():
+                index = obj.get_path ().rfind (obj.get_name ())
+                parent_obj = self.get_file_object_from_path (obj.get_path ()[:index], is_folder = True)
+                # We ideally need to check if the parent_obj returns None
+                obj.set_parent_folder_obj (parent_obj)
+
         self.emit ("folder_moved", old_path, new_path)
 
     def move_file (self, old_path, new_path):
         shutil.move(old_path, new_path)
 
-        folder_obj = self.get_file_object_from_path (old_path, is_folder = False)
-        folder_obj.set_path (new_path)
+        file_obj = self.get_file_object_from_path (old_path, is_folder = False)
+        file_obj.set_path (new_path)
+
+        index = file_obj.get_path ().rfind ("/")
+        parent_path = file_obj.get_path ()[:index]
+        file_obj.set_parent_folder_obj (self.get_file_object_from_path (parent_path, is_folder = True))
 
         self.emit ("file_moved", old_path, new_path)
 
@@ -319,7 +376,7 @@ class MarkItFileManager (GObject.GObject):
     def get_file_object_from_path (self, path, is_folder = False):
         if is_folder != True:
             for file_object in self.file_list:
-                print ("From get_file_object_from_path, file path is " + file_object.get_path ())
+                #print ("From get_file_object_from_path, file path is " + file_object.get_path ())
                 if file_object.get_path () == path:
                     return file_object
         else:
@@ -383,10 +440,14 @@ class MarkItFileManager (GObject.GObject):
 
         parent_is_root = False
         while parent_is_root == False:
-            parent = child.get_parent_folder_obj ()
+            parent = child.get_parent_folder_obj () # Parent is a folder
+            #print ("Parent of " + child.get_name () + ":")
+            #print (parent)
+            #print ("\n")
             if parent == None:
                 parent_is_root = True
             else:
+                #print ("Parent of child " + child.get_name () + " has path " + parent.get_path ())
                 levels += 1
                 if parent.get_path () == ancestor_folder_obj.get_path ():
                     return levels # Return how deeply descended the file is

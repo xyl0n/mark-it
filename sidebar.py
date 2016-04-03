@@ -119,10 +119,18 @@ class MarkItSidebar (Gtk.Box):
             self.workspace_view.select_row (row)
 
     def on_document_move_request (self, *args):
-        if args[3] == self.file_manager.FileTypes.FILE:
-            self.file_manager.move_file (args[1], args[2])
-        elif args[3] == self.file_manager.FileTypes.FOLDER:
-            self.file_manager.move_folder (args[1], args[2])
+        obj = args[1]
+        new_path = args[2]
+        if obj == None:
+            print ("Couldn't find file or folder at this path")
+            # We need to do a dialog box or smth maybe
+            return
+
+        if obj.get_is_folder ():
+            self.file_manager.move_folder (obj, new_path)
+        else:
+            self.file_manager.move_file (obj.get_path (), new_path)
+
 
     def on_workspace_file_closed (self, *args):
         # But first we need to close the pages

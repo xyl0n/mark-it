@@ -10,7 +10,7 @@ class MarkItDocumentView (Gtk.TreeView):
 
     __gsignals__ = {
         'file_clicked': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'file_move_requested': (GObject.SIGNAL_RUN_FIRST, None, (str, str, int,)),
+        'file_move_requested': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT, str,)),
     }
 
     class MarkItTreeStore (Gtk.TreeStore):
@@ -93,7 +93,7 @@ class MarkItDocumentView (Gtk.TreeView):
             last_index = self.file_source_path.rfind ("/")
             file_name = file_obj.get_name ()
 
-            self.file_dest_path = self.parent_tree.create_file_path_from_tree_path (dest_path, file_name)
+            self.file_dest_path = self.parent_tree.create_file_path_from_tree_path (dest_path, file_name, file_obj.get_is_folder())
 
             return True
 
@@ -230,7 +230,18 @@ class MarkItDocumentView (Gtk.TreeView):
     # What? Why do I need to add a wrapper around the tree store signal
     # that does the same thing?
     def on_row_move (self, *args):
-        self.emit ("file_move_requested", args[1], args[2], args[3])
+        old_path = args[1]
+        new_path = args[2]
+        obj_type = args[3]
+
+        if obj_type == self.file_manager.FileTypes.FILE.value:
+            obj = self.file_manager.get_file_object_from_path (old_path)
+        elif obj_type == self.file_manager.FileTypes.FOLDER.value:
+            obj = self.file_manager.get_file_object_from_path (old_path, is_folder = True)
+        else:
+            obj = None
+
+        self.emit ("file_move_requested", obj, new_path)
 
     # TODO: Clean up the following functions, they're a mess right now
 
@@ -268,7 +279,6 @@ class MarkItDocumentView (Gtk.TreeView):
 
         if file_type == self.file_manager.FileTypes.FILE:
             full_path = full_path[:-1]
-            print ("FULL PATH IS " + full_path)
             file_obj = self.file_manager.get_file_object_from_path (full_path, is_folder = False)
         elif file_type == self.file_manager.FileTypes.FOLDER:
             file_obj = self.file_manager.get_file_object_from_path (full_path, is_folder = True)
@@ -277,7 +287,7 @@ class MarkItDocumentView (Gtk.TreeView):
 
         return file_obj
 
-    def create_file_path_from_tree_path (self, tree_path, file_name):
+    def create_file_path_from_tree_path (self, tree_path, file_name, is_folder = False):
         # We use this when we don't have a file existing a the desired location
         path_str = tree_path.to_string ()
         last_index_of_colon = path_str.rfind(":")
@@ -289,8 +299,16 @@ class MarkItDocumentView (Gtk.TreeView):
 
             path = Gtk.TreePath.new_from_string (path_str)
             file_obj = self.convert_tree_path_to_file_object (path)
-            full_path = file_obj.get_path () + "/" + file_name
+            full_path = file_obj.get_path ()
+            if full_path.endswith ("/") == False:
+                full_path += "/"
+            full_path = full_path + file_name
+            if is_folder:
+                full_path += "/"
         else:
             full_path = self.file_manager.get_app_dir () + file_name
+
+            if is_folder:
+                full_path += "/"
 
         return full_path
