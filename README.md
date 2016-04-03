@@ -1,5 +1,7 @@
 Mark It is a markdown editor for Linux (maybe Windows) systems.
 
+![Screenshot of Mark It](https://raw.githubusercontent.com/xyl0n/mark-it/master/img/screenshot.png)
+
 REQUIREMENTS
 ------------
 You need:
